@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { MetricCard } from "@/components/metric-card";
 import { DataTable } from "@/components/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,7 +10,6 @@ import {
   Gauge,
   TrendingUp,
   TrendingDown,
-  Plus,
   Star,
   StarOff,
 } from "lucide-react";
@@ -153,19 +151,13 @@ export default function Market() {
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Market Overview
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Real-time cryptocurrency market data
-          </p>
-        </div>
-        <Button variant="outline" className="gap-2" data-testid="button-add-token">
-          <Plus className="w-4 h-4" />
-          Add Token
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          Market Overview
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Real-time cryptocurrency market data
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
