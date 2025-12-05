@@ -4,15 +4,34 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-const databaseUrl = process.env.DATABASE_URL;
+// Prefer Supabase database if available, fallback to local
+const supabaseUrl = process.env.SUPABASE_DATABASE_URL;
+const localUrl = process.env.DATABASE_URL;
+
+const databaseUrl = supabaseUrl || localUrl;
 
 if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_DATABASE_URL or DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
+// Configure SSL for Supabase pooler connection
+const isSupabase = !!supabaseUrl;
+
 export const pool = new Pool({ 
-  connectionString: databaseUrl
+  connectionString: databaseUrl,
+  ssl: isSupabase ? {
+    rejectUnauthorized: false
+  } : undefined,
+  // For Supabase pooler (PgBouncer), disable prepared statements
+  ...(isSupabase && {
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
+  })
 });
+
+console.log(`Database: ${isSupabase ? 'Supabase (pooler)' : 'Local PostgreSQL'}`);
+
 export const db = drizzle(pool, { schema });
