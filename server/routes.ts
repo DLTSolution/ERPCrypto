@@ -1,10 +1,9 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { generateIN2991Report } from "./pdf-service";
+import { supabase } from "./supabase";
 import {
-  insertUserSchema,
   insertWalletSchema,
   insertUserPoolSchema,
   insertCollateralSchema,
@@ -12,21 +11,31 @@ import {
   insertOperationSchema,
 } from "@shared/schema";
 
-const SALT_ROUNDS = 10;
-
-// Session user type extension
-declare module "express-session" {
-  interface SessionData {
-    userId?: number;
-  }
+interface AuthenticatedRequest extends Request {
+  supabaseUserId?: string;
 }
 
-// Auth middleware
-function requireAuth(req: Request, res: Response, next: Function) {
-  if (!req.session?.userId) {
+async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  next();
+
+  const token = authHeader.substring(7);
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    
+    if (error || !user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    req.supabaseUserId = user.id;
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 }
 
 export async function registerRoutes(
@@ -34,70 +43,32 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  // ============ AUTH ROUTES ============
+  // ============ AUTH ROUTES (Supabase handles auth, these are for session verification) ============
 
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const parsed = insertUserSchema.safeParse(req.body);
-      if (!parsed.success) {
-        return res.status(400).json({ message: "Invalid input" });
-      }
-
-      const existing = await storage.getUserByUsername(parsed.data.username);
-      if (existing) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await bcrypt.hash(parsed.data.password, SALT_ROUNDS);
-      const user = await storage.createUser({
-        username: parsed.data.username,
-        password: hashedPassword,
-      });
-      req.session.userId = user.id;
-      res.json({ id: user.id, username: user.username });
-    } catch (error) {
-      console.error("Register error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      const user = await storage.getUserByUsername(username);
-
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      req.session.userId = user.id;
-      res.json({ id: user.id, username: user.username });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Server error" });
-    }
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy(() => {
-      res.json({ message: "Logged out" });
-    });
-  });
-
-  app.get("/api/auth/me", async (req, res) => {
-    if (!req.session?.userId) {
+  app.get("/api/auth/me", async (req: AuthenticatedRequest, res) => {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ message: "Not authenticated" });
     }
-    const user = await storage.getUser(req.session.userId);
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
+
+    const token = authHeader.substring(7);
+    
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser(token);
+      
+      if (error || !user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      res.json({ 
+        id: user.id, 
+        email: user.email,
+        username: user.user_metadata?.username || user.email?.split("@")[0]
+      });
+    } catch (error) {
+      return res.status(401).json({ message: "Not authenticated" });
     }
-    res.json({ id: user.id, username: user.username });
   });
 
   // ============ MARKET ROUTES (PUBLIC) ============
@@ -165,30 +136,30 @@ export async function registerRoutes(
 
   // ============ WALLET ROUTES (PROTECTED) ============
 
-  app.get("/api/wallets", requireAuth, async (req, res) => {
+  app.get("/api/wallets", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const walletList = await storage.getWallets(req.session.userId!);
+      const walletList = await storage.getWalletsBySupabaseId(req.supabaseUserId!);
       res.json(walletList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post("/api/wallets", requireAuth, async (req, res) => {
+  app.post("/api/wallets", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = insertWalletSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const wallet = await storage.createWallet(req.session.userId!, parsed.data);
+      const wallet = await storage.createWalletForSupabaseUser(req.supabaseUserId!, parsed.data);
       res.json(wallet);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.patch("/api/wallets/:id", requireAuth, async (req, res) => {
+  app.patch("/api/wallets/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = insertWalletSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -205,7 +176,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/wallets/:id", requireAuth, async (req, res) => {
+  app.delete("/api/wallets/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const success = await storage.deleteWallet(parseInt(req.params.id));
       if (!success) {
@@ -219,23 +190,23 @@ export async function registerRoutes(
 
   // ============ USER POOLS ROUTES (PROTECTED) ============
 
-  app.get("/api/user-pools", requireAuth, async (req, res) => {
+  app.get("/api/user-pools", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const pools = await storage.getUserPools(req.session.userId!);
+      const pools = await storage.getUserPoolsBySupabaseId(req.supabaseUserId!);
       res.json(pools);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post("/api/user-pools", requireAuth, async (req, res) => {
+  app.post("/api/user-pools", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = insertUserPoolSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const pool = await storage.createUserPool(req.session.userId!, parsed.data);
+      const pool = await storage.createUserPoolForSupabaseUser(req.supabaseUserId!, parsed.data);
       res.json(pool);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
@@ -244,23 +215,23 @@ export async function registerRoutes(
 
   // ============ COLLATERAL ROUTES (PROTECTED) ============
 
-  app.get("/api/collaterals", requireAuth, async (req, res) => {
+  app.get("/api/collaterals", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const collateralList = await storage.getCollaterals(req.session.userId!);
+      const collateralList = await storage.getCollateralsBySupabaseId(req.supabaseUserId!);
       res.json(collateralList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post("/api/collaterals", requireAuth, async (req, res) => {
+  app.post("/api/collaterals", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = insertCollateralSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const collateral = await storage.createCollateral(req.session.userId!, parsed.data);
+      const collateral = await storage.createCollateralForSupabaseUser(req.supabaseUserId!, parsed.data);
       res.json(collateral);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
@@ -269,23 +240,23 @@ export async function registerRoutes(
 
   // ============ BORROW ROUTES (PROTECTED) ============
 
-  app.get("/api/borrows", requireAuth, async (req, res) => {
+  app.get("/api/borrows", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const borrowList = await storage.getBorrows(req.session.userId!);
+      const borrowList = await storage.getBorrowsBySupabaseId(req.supabaseUserId!);
       res.json(borrowList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post("/api/borrows", requireAuth, async (req, res) => {
+  app.post("/api/borrows", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = insertBorrowSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const borrow = await storage.createBorrow(req.session.userId!, parsed.data);
+      const borrow = await storage.createBorrowForSupabaseUser(req.supabaseUserId!, parsed.data);
       res.json(borrow);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
@@ -294,25 +265,25 @@ export async function registerRoutes(
 
   // ============ OPERATIONS ROUTES (PROTECTED) ============
 
-  app.get("/api/operations", requireAuth, async (req, res) => {
+  app.get("/api/operations", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const operationList = await storage.getOperations(req.session.userId!);
+      const operationList = await storage.getOperationsBySupabaseId(req.supabaseUserId!);
       res.json(operationList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.post("/api/operations", requireAuth, async (req, res) => {
+  app.post("/api/operations", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const parsed = insertOperationSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const userWallets = await storage.getWallets(req.session.userId!);
-      const operation = await storage.createOperation(
-        req.session.userId!,
+      const userWallets = await storage.getWalletsBySupabaseId(req.supabaseUserId!);
+      const operation = await storage.createOperationForSupabaseUser(
+        req.supabaseUserId!,
         parsed.data,
         userWallets
       );
@@ -324,35 +295,31 @@ export async function registerRoutes(
 
   // ============ TAX ROUTES (PROTECTED) ============
 
-  app.get("/api/tax/report", requireAuth, async (req, res) => {
+  app.get("/api/tax/report", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const report = await storage.getTaxReport(req.session.userId!);
+      const report = await storage.getTaxReportBySupabaseId(req.supabaseUserId!);
       res.json(report);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.get("/api/tax/capital-gains", requireAuth, async (req, res) => {
+  app.get("/api/tax/capital-gains", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const gains = await storage.getCapitalGains(req.session.userId!);
+      const gains = await storage.getCapitalGainsBySupabaseId(req.supabaseUserId!);
       res.json(gains);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
   });
 
-  app.get("/api/tax/in2991-pdf", requireAuth, async (req, res) => {
+  app.get("/api/tax/in2991-pdf", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.session.userId!;
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      const supabaseUserId = req.supabaseUserId!;
 
       const year = parseInt(req.query.year as string) || new Date().getFullYear();
-      const taxEntries = await storage.getTaxReport(userId);
-      const capitalGains = await storage.getCapitalGains(userId);
+      const taxEntries = await storage.getTaxReportBySupabaseId(supabaseUserId);
+      const capitalGains = await storage.getCapitalGainsBySupabaseId(supabaseUserId);
       const ptaxData = await storage.getPtaxRate();
 
       const yearEntries = taxEntries.filter((entry) => 
@@ -363,7 +330,7 @@ export async function registerRoutes(
       );
 
       const pdfDoc = generateIN2991Report({
-        username: user.username,
+        username: supabaseUserId.substring(0, 8),
         year,
         taxEntries: yearEntries,
         capitalGains: yearGains,
@@ -374,7 +341,7 @@ export async function registerRoutes(
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="IN2991_${year}_${user.username}.pdf"`
+        `attachment; filename="IN2991_${year}.pdf"`
       );
 
       pdfDoc.pipe(res);

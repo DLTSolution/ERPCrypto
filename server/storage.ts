@@ -414,6 +414,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(wallets).where(eq(wallets.userId, userId));
   }
 
+  async getWalletsBySupabaseId(supabaseUserId: string): Promise<Wallet[]> {
+    return await db.select().from(wallets).where(eq(wallets.supabaseUserId, supabaseUserId));
+  }
+
   async getWallet(id: number): Promise<Wallet | undefined> {
     const [wallet] = await db.select().from(wallets).where(eq(wallets.id, id));
     return wallet || undefined;
@@ -421,6 +425,11 @@ export class DatabaseStorage implements IStorage {
 
   async createWallet(userId: number, wallet: InsertWallet): Promise<Wallet> {
     const [newWallet] = await db.insert(wallets).values({ ...wallet, userId }).returning();
+    return newWallet;
+  }
+
+  async createWalletForSupabaseUser(supabaseUserId: string, wallet: InsertWallet): Promise<Wallet> {
+    const [newWallet] = await db.insert(wallets).values({ ...wallet, supabaseUserId }).returning();
     return newWallet;
   }
 
@@ -473,8 +482,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(userPools).where(eq(userPools.userId, userId));
   }
 
+  async getUserPoolsBySupabaseId(supabaseUserId: string): Promise<UserPool[]> {
+    return await db.select().from(userPools).where(eq(userPools.supabaseUserId, supabaseUserId));
+  }
+
   async createUserPool(userId: number, pool: InsertUserPool): Promise<UserPool> {
     const [newPool] = await db.insert(userPools).values({ ...pool, userId }).returning();
+    return newPool;
+  }
+
+  async createUserPoolForSupabaseUser(supabaseUserId: string, pool: InsertUserPool): Promise<UserPool> {
+    const [newPool] = await db.insert(userPools).values({ ...pool, supabaseUserId }).returning();
     return newPool;
   }
 
@@ -483,8 +501,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(collaterals).where(eq(collaterals.userId, userId));
   }
 
+  async getCollateralsBySupabaseId(supabaseUserId: string): Promise<Collateral[]> {
+    return await db.select().from(collaterals).where(eq(collaterals.supabaseUserId, supabaseUserId));
+  }
+
   async createCollateral(userId: number, collateral: InsertCollateral): Promise<Collateral> {
     const [newCollateral] = await db.insert(collaterals).values({ ...collateral, userId }).returning();
+    return newCollateral;
+  }
+
+  async createCollateralForSupabaseUser(supabaseUserId: string, collateral: InsertCollateral): Promise<Collateral> {
+    const [newCollateral] = await db.insert(collaterals).values({ ...collateral, supabaseUserId }).returning();
     return newCollateral;
   }
 
@@ -493,8 +520,17 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(borrows).where(eq(borrows.userId, userId));
   }
 
+  async getBorrowsBySupabaseId(supabaseUserId: string): Promise<Borrow[]> {
+    return await db.select().from(borrows).where(eq(borrows.supabaseUserId, supabaseUserId));
+  }
+
   async createBorrow(userId: number, borrow: InsertBorrow): Promise<Borrow> {
     const [newBorrow] = await db.insert(borrows).values({ ...borrow, userId }).returning();
+    return newBorrow;
+  }
+
+  async createBorrowForSupabaseUser(supabaseUserId: string, borrow: InsertBorrow): Promise<Borrow> {
+    const [newBorrow] = await db.insert(borrows).values({ ...borrow, supabaseUserId }).returning();
     return newBorrow;
   }
 
@@ -504,6 +540,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(operations)
       .where(eq(operations.userId, userId))
+      .orderBy(desc(operations.date));
+  }
+
+  async getOperationsBySupabaseId(supabaseUserId: string): Promise<Operation[]> {
+    return await db
+      .select()
+      .from(operations)
+      .where(eq(operations.supabaseUserId, supabaseUserId))
       .orderBy(desc(operations.date));
   }
 
@@ -527,6 +571,30 @@ export class DatabaseStorage implements IStorage {
     const [newOperation] = await db
       .insert(operations)
       .values({ ...operation, userId, transferType })
+      .returning();
+    return newOperation;
+  }
+
+  async createOperationForSupabaseUser(
+    supabaseUserId: string,
+    operation: InsertOperation,
+    userWallets: Wallet[]
+  ): Promise<Operation> {
+    let transferType: string | null = null;
+    if (operation.type === "transfer_in" || operation.type === "transfer_out") {
+      const fromExists = operation.walletFrom && userWallets.some((w) => w.id.toString() === operation.walletFrom);
+      const toExists = operation.walletTo && userWallets.some((w) => w.id.toString() === operation.walletTo);
+
+      if (fromExists && toExists) {
+        transferType = "internal";
+      } else {
+        transferType = "external";
+      }
+    }
+
+    const [newOperation] = await db
+      .insert(operations)
+      .values({ ...operation, supabaseUserId, transferType })
       .returning();
     return newOperation;
   }
@@ -568,8 +636,69 @@ export class DatabaseStorage implements IStorage {
     return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
+  async getTaxReportBySupabaseId(supabaseUserId: string): Promise<TaxReportEntry[]> {
+    const entries: TaxReportEntry[] = [];
+
+    const ops = await this.getOperationsBySupabaseId(supabaseUserId);
+    for (const op of ops) {
+      entries.push({
+        id: op.id.toString(),
+        date: op.date,
+        operationType: op.type,
+        description: op.description || `${op.type} ${op.tokenIn || op.tokenOut || ""}`.trim(),
+        valueUsd: op.valueUsd,
+        valueBrl: op.valueBrl,
+        source: "operation",
+        sourceId: op.id.toString(),
+      });
+    }
+
+    const pools = await this.getUserPoolsBySupabaseId(supabaseUserId);
+    for (const pool of pools) {
+      if (pool.feesEarned > 0) {
+        entries.push({
+          id: `pool-fee-${pool.id}`,
+          date: pool.exitDate || pool.entryDate,
+          operationType: "pool_fees",
+          description: `Fees from ${pool.pair} pool on ${pool.dex}`,
+          valueUsd: pool.feesEarned,
+          valueBrl: pool.feesEarned * 5.15,
+          source: "pool",
+          sourceId: pool.id.toString(),
+        });
+      }
+    }
+
+    return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
   async getCapitalGains(userId: number): Promise<CapitalGainsEntry[]> {
     const ops = await this.getOperations(userId);
+    const sellOps = ops.filter((op) => op.type === "sell");
+
+    const monthlyData: Record<string, number> = {};
+    for (const op of sellOps) {
+      const month = op.date.substring(0, 7);
+      monthlyData[month] = (monthlyData[month] || 0) + op.valueBrl;
+    }
+
+    const entries: CapitalGainsEntry[] = Object.entries(monthlyData)
+      .map(([month, sellVolumeBrl]) => {
+        const taxable = sellVolumeBrl > 35000;
+        return {
+          month,
+          sellVolumeBrl,
+          taxDueBrl: taxable ? sellVolumeBrl * 0.15 : 0,
+          taxable,
+        };
+      })
+      .sort((a, b) => b.month.localeCompare(a.month));
+
+    return entries;
+  }
+
+  async getCapitalGainsBySupabaseId(supabaseUserId: string): Promise<CapitalGainsEntry[]> {
+    const ops = await this.getOperationsBySupabaseId(supabaseUserId);
     const sellOps = ops.filter((op) => op.type === "sell");
 
     const monthlyData: Record<string, number> = {};

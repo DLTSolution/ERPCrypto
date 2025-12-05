@@ -22,12 +22,13 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 // Wallets table
 export const wallets = pgTable("wallets", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
+  supabaseUserId: text("supabase_user_id"),
   name: text("name").notNull(),
   address: text("address").notNull(),
 });
 
-export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, userId: true });
+export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, userId: true, supabaseUserId: true });
 
 export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
@@ -35,7 +36,8 @@ export type InsertWallet = z.infer<typeof insertWalletSchema>;
 // User Pools table (liquidity positions)
 export const userPools = pgTable("user_pools", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
+  supabaseUserId: text("supabase_user_id"),
   dex: text("dex").notNull(),
   network: text("network").notNull(),
   pair: text("pair").notNull(),
@@ -51,7 +53,7 @@ export const userPools = pgTable("user_pools", {
   status: text("status").notNull().default("open"),
 });
 
-export const insertUserPoolSchema = createInsertSchema(userPools).omit({ id: true, userId: true });
+export const insertUserPoolSchema = createInsertSchema(userPools).omit({ id: true, userId: true, supabaseUserId: true });
 
 export type UserPool = typeof userPools.$inferSelect;
 export type InsertUserPool = z.infer<typeof insertUserPoolSchema>;
@@ -59,7 +61,8 @@ export type InsertUserPool = z.infer<typeof insertUserPoolSchema>;
 // Collaterals table
 export const collaterals = pgTable("collaterals", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
+  supabaseUserId: text("supabase_user_id"),
   asset: text("asset").notNull(),
   amount: real("amount").notNull(),
   valueUsd: real("value_usd").notNull(),
@@ -67,7 +70,7 @@ export const collaterals = pgTable("collaterals", {
   healthFactor: real("health_factor").notNull(),
 });
 
-export const insertCollateralSchema = createInsertSchema(collaterals).omit({ id: true, userId: true });
+export const insertCollateralSchema = createInsertSchema(collaterals).omit({ id: true, userId: true, supabaseUserId: true });
 
 export type Collateral = typeof collaterals.$inferSelect;
 export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
@@ -75,14 +78,15 @@ export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
 // Borrows table
 export const borrows = pgTable("borrows", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
+  supabaseUserId: text("supabase_user_id"),
   asset: text("asset").notNull(),
   borrowedAmount: real("borrowed_amount").notNull(),
   interestRate: real("interest_rate").notNull(),
   valueUsd: real("value_usd").notNull(),
 });
 
-export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, userId: true });
+export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, userId: true, supabaseUserId: true });
 
 export type Borrow = typeof borrows.$inferSelect;
 export type InsertBorrow = z.infer<typeof insertBorrowSchema>;
@@ -90,7 +94,8 @@ export type InsertBorrow = z.infer<typeof insertBorrowSchema>;
 // Operations table
 export const operations = pgTable("operations", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  userId: integer("user_id").references(() => users.id),
+  supabaseUserId: text("supabase_user_id"),
   type: text("type").notNull(), // buy, sell, swap, transfer_in, transfer_out, lost_funds
   tokenOut: text("token_out"),
   tokenIn: text("token_in"),
@@ -105,7 +110,7 @@ export const operations = pgTable("operations", {
   transferType: text("transfer_type"), // internal, external
 });
 
-export const insertOperationSchema = createInsertSchema(operations).omit({ id: true, userId: true, transferType: true });
+export const insertOperationSchema = createInsertSchema(operations).omit({ id: true, userId: true, supabaseUserId: true, transferType: true });
 
 export type Operation = typeof operations.$inferSelect;
 export type InsertOperation = z.infer<typeof insertOperationSchema>;

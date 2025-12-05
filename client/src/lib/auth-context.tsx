@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
-import { supabase } from "./supabase";
-import type { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { supabase, isSupabaseConfigured } from "./supabase";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 interface AuthUser {
   id: string;
@@ -36,6 +36,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   useEffect(() => {
+    if (!supabase || !isSupabaseConfigured) {
+      setIsLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(mapSupabaseUser(session?.user ?? null));
       setIsLoading(false);
@@ -52,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
+    if (!supabase || !isSupabaseConfigured) {
+      return { success: false, error: "Authentication is not configured" };
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -71,6 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, password: string) => {
+    if (!supabase || !isSupabaseConfigured) {
+      return { success: false, error: "Authentication is not configured" };
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -94,7 +107,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
+    if (supabase && isSupabaseConfigured) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
   }, []);
 
