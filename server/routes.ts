@@ -149,12 +149,16 @@ export async function registerRoutes(
     try {
       const parsed = insertWalletSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.error("Wallet validation error:", parsed.error);
         return res.status(400).json({ message: "Invalid input" });
       }
 
+      console.log("Creating wallet for user:", req.supabaseUserId, "data:", parsed.data);
       const wallet = await storage.createWalletForSupabaseUser(req.supabaseUserId!, parsed.data);
+      console.log("Wallet created:", wallet);
       res.json(wallet);
     } catch (error) {
+      console.error("Error creating wallet:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
