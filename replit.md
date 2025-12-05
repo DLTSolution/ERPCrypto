@@ -8,6 +8,14 @@ ERPCrypto is a hybrid cryptocurrency platform that combines free public tools (m
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (December 2024)
+
+- **PostgreSQL Database Integration:** Migrated from in-memory storage to PostgreSQL using Drizzle ORM. All user data (wallets, operations, pools, borrow/lend) is now persisted to database.
+- **CoinGecko API Integration:** Real-time market data including prices, market cap, 24h changes, volume, and Fear & Greed index from CoinGecko and alternative.me APIs with fallback data.
+- **PTAX API Integration:** Real-time USD/BRL exchange rates from Banco Central do Brasil (BCB) OLINDA API for accurate Brazilian tax calculations.
+- **PDF Generation:** IN 2991 fiscal reports can now be exported as PDF documents using PDFKit.
+- **GitHub Integration:** Project connected to repository at https://github.com/DLTSolution/ERPCrypto.git
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -47,10 +55,16 @@ Preferred communication style: Simple, everyday language.
 **Technology Stack:**
 - **Runtime:** Node.js with TypeScript
 - **Framework:** Express.js
+- **Database:** PostgreSQL with Drizzle ORM
 - **Session Management:** express-session with MemoryStore
+- **PDF Generation:** PDFKit for fiscal report exports
 - **Validation:** Zod schemas (shared between client and server)
-- **ORM:** Drizzle ORM configured for PostgreSQL
 - **Build Process:** esbuild for server bundling, Vite for client
+
+**External API Integrations:**
+- **CoinGecko API:** Market data, token prices, OHLC charts (with caching)
+- **Fear & Greed Index API:** Market sentiment from alternative.me
+- **PTAX API (BCB):** Official USD/BRL exchange rates from Banco Central do Brasil
 
 **API Structure:**
 - RESTful endpoints organized in `server/routes.ts`
@@ -66,74 +80,71 @@ Preferred communication style: Simple, everyday language.
 
 **API Endpoints:**
 - Auth: `/api/auth/*` (register, login, logout, me)
-- Market data: `/api/market/overview`, `/api/tokens`, `/api/pools`, `/api/candles/:tokenId/:timeframe`
-- Wallets: `/api/wallets` (GET, POST), `/api/wallets/:id` (PUT, DELETE)
-- User pools: `/api/pools/user` (GET, POST)
+- Market data: `/api/market/overview`, `/api/market/tokens`
+- Pools: `/api/pools` (public), `/api/user-pools` (protected)
+- PTAX: `/api/ptax`, `/api/ptax/:date` (historical rates)
+- Charts: `/api/charts/:tokenId/:timeframe`
+- Wallets: `/api/wallets` (GET, POST), `/api/wallets/:id` (PATCH, DELETE)
 - Collaterals: `/api/collaterals` (GET, POST)
 - Borrows: `/api/borrows` (GET, POST)
 - Operations: `/api/operations` (GET, POST)
-- Tax reports: `/api/tax/report`, `/api/tax/capital-gains`
+- Tax reports: `/api/tax/report`, `/api/tax/capital-gains`, `/api/tax/in2991-pdf`
 
-**Data Storage:**
-- In-memory storage implementation in `server/storage.ts` (IStorage interface)
-- Schema definitions in `shared/schema.ts` using Zod
-- Drizzle ORM configured for PostgreSQL migration (not yet connected to database)
-- Session storage uses MemoryStore (switches to connect-pg-simple for production PostgreSQL)
+**Data Storage (PostgreSQL via Drizzle ORM):**
+- Schema definitions in `shared/schema.ts`
+- Database connection in `server/db.ts`
+- Storage interface in `server/storage.ts` (DatabaseStorage class)
+- Use `npm run db:push` to sync schema changes
+
+**Database Tables:**
+- `users`: id (serial), username, password
+- `wallets`: id (serial), userId, name, address
+- `user_pools`: id (serial), userId, dex, network, pair, entry/exit dates, values, fees, status
+- `collaterals`: id (serial), userId, asset, amount, valueUsd, ltv, healthFactor
+- `borrows`: id (serial), userId, asset, borrowedAmount, interestRate, valueUsd
+- `operations`: id (serial), userId, type, tokens, amounts, values, dates, transferType
 
 ### External Dependencies
 
 **UI Component Libraries:**
-- **Radix UI:** Comprehensive collection of unstyled, accessible UI primitives (@radix-ui/react-*)
+- **Radix UI:** Comprehensive collection of unstyled, accessible UI primitives
 - **Shadcn UI:** Pre-styled component library built on Radix UI with Tailwind
 - **Lucide React:** Icon library for consistent iconography
-- **cmdk:** Command palette component
-- **Embla Carousel:** Carousel/slider component
+- **Recharts:** Charting library for data visualization
 
 **Data Fetching & State:**
-- **TanStack Query (React Query):** Server state management, caching, and synchronization
+- **TanStack Query (React Query):** Server state management with 60s stale time
 - **React Hook Form:** Form state management and validation
-- **Zod:** Schema validation (shared between client/server via `@hookform/resolvers`)
+- **Zod:** Schema validation (shared between client/server)
 
 **Styling & Design:**
 - **TailwindCSS:** Utility-first CSS framework
 - **class-variance-authority (cva):** Type-safe variant styling
 - **clsx & tailwind-merge:** Conditional class name utilities
-- **PostCSS & Autoprefixer:** CSS processing
 
 **Backend Services:**
 - **Express.js:** Web server framework
 - **express-session:** Session management middleware
-- **connect-pg-simple:** PostgreSQL session store (for production)
-- **memorystore:** In-memory session store (for development)
-- **Drizzle ORM:** Type-safe SQL query builder and ORM
-- **PostgreSQL:** Planned production database (configured but not yet connected)
+- **PDFKit:** PDF document generation for fiscal reports
+- **Drizzle ORM:** Type-safe SQL query builder
+- **pg:** PostgreSQL client
 
 **Development Tools:**
-- **Vite:** Development server with HMR and production bundler
-- **esbuild:** Fast server-side bundling
-- **tsx:** TypeScript execution for development
+- **Vite:** Development server with HMR
+- **tsx:** TypeScript execution
 - **TypeScript:** Type safety across entire stack
-- **Replit plugins:** Development banner, runtime error overlay, cartographer
+- **drizzle-kit:** Database schema management (`npm run db:push`)
 
-**Build & Deployment:**
-- Client builds to `dist/public` via Vite
-- Server builds to `dist/index.cjs` via esbuild with dependency bundling
-- Static file serving in production mode
-- Development mode uses Vite middleware with HMR
+## Development Commands
 
-**Third-Party Integrations (Planned/Mocked):**
-- Market data APIs (currently using mock data in storage layer)
-- Blockchain data providers (for wallet address tracking)
-- Tax calculation services (implemented with mock data)
-- Exchange rate APIs (for BRL/USD conversions)
+- `npm run dev` - Start development server
+- `npm run db:push` - Push schema changes to database
+- `npm run build` - Build for production
 
-**Database Schema (via Drizzle):**
-- Users: id, username, password (hashed)
-- Wallets: id, userId, name, address
-- Tokens: market data for cryptocurrencies
-- Pools: liquidity pool information (pair, network, DEX, TVL, volume, APY)
-- UserPools: user-specific pool positions with entry/exit tracking
-- Collaterals: collateral positions for lending protocols
-- Borrows: borrow positions with interest tracking
-- Operations: transaction history (buy, sell, swap, transfer, lost funds)
-- Tax reports & capital gains: calculated data for Brazilian tax reporting
+## Future Enhancements (Planned)
+
+- Web3 wallet integration (MetaMask, WalletConnect)
+- Real-time price alerts
+- Multi-currency support
+- Advanced tax optimization suggestions
+- Portfolio performance analytics

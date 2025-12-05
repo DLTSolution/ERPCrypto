@@ -1,6 +1,8 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
+import { generateIN2991Report } from "./pdf-service";
 import {
   insertUserSchema,
   insertWalletSchema,
@@ -9,6 +11,8 @@ import {
   insertBorrowSchema,
   insertOperationSchema,
 } from "@shared/schema";
+
+const SALT_ROUNDS = 10;
 
 // Session user type extension
 declare module "express-session" {
@@ -44,7 +48,11 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Username already exists" });
       }
 
-      const user = await storage.createUser(parsed.data);
+      const hashedPassword = await bcrypt.hash(parsed.data.password, SALT_ROUNDS);
+      const user = await storage.createUser({
+        username: parsed.data.username,
+        password: hashedPassword,
+      });
       req.session.userId = user.id;
       res.json({ id: user.id, username: user.username });
     } catch (error) {
@@ -58,7 +66,12 @@ export async function registerRoutes(
       const { username, password } = req.body;
       const user = await storage.getUserByUsername(username);
 
-      if (!user || user.password !== password) {
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
@@ -326,6 +339,49 @@ export async function registerRoutes(
       res.json(gains);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/tax/in2991-pdf", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const year = parseInt(req.query.year as string) || new Date().getFullYear();
+      const taxEntries = await storage.getTaxReport(userId);
+      const capitalGains = await storage.getCapitalGains(userId);
+      const ptaxData = await storage.getPtaxRate();
+
+      const yearEntries = taxEntries.filter((entry) => 
+        entry.date.startsWith(year.toString())
+      );
+      const yearGains = capitalGains.filter((entry) => 
+        entry.month.startsWith(year.toString())
+      );
+
+      const pdfDoc = generateIN2991Report({
+        username: user.username,
+        year,
+        taxEntries: yearEntries,
+        capitalGains: yearGains,
+        ptaxRate: ptaxData.rate,
+        generatedAt: new Date(),
+      });
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="IN2991_${year}_${user.username}.pdf"`
+      );
+
+      pdfDoc.pipe(res);
+      pdfDoc.end();
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      res.status(500).json({ message: "Error generating PDF" });
     }
   });
 
