@@ -104,7 +104,7 @@ class CoinGeckoService {
     tokens?: { data: Token[]; timestamp: number };
     overview?: { data: MarketOverview; timestamp: number };
   } = {};
-  private cacheTimeout = 60000; // 1 minute cache
+  private cacheTimeout = 300000; // 5 minutes cache
 
   private fallbackTokens: Token[] = [
     { id: "bitcoin", symbol: "BTC", name: "Bitcoin", price: 97234.56, change24h: 2.34, marketCap: 1920000000000, rank: 1, volume24h: 48500000000 },
