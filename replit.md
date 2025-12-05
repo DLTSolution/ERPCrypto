@@ -10,8 +10,10 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (December 2024)
 
+- **Hybrid Architecture:** Supabase Auth (JWT) for authentication + local Replit PostgreSQL for data storage
+- **Wallet Registry:** Full CRUD operations with user isolation via supabaseUserId field
 - **PostgreSQL Database Integration:** Migrated from in-memory storage to PostgreSQL using Drizzle ORM. All user data (wallets, operations, pools, borrow/lend) is now persisted to database.
-- **CoinGecko API Integration:** Real-time market data including prices, market cap, 24h changes, volume, and Fear & Greed index from CoinGecko and alternative.me APIs with fallback data.
+- **CoinGecko API Integration:** Real-time market data including prices, market cap, 24h changes, volume, and Fear & Greed index from CoinGecko and alternative.me APIs with 5-minute cache.
 - **PTAX API Integration:** Real-time USD/BRL exchange rates from Banco Central do Brasil (BCB) OLINDA API for accurate Brazilian tax calculations.
 - **PDF Generation:** IN 2991 fiscal reports can now be exported as PDF documents using PDFKit.
 - **GitHub Integration:** Project connected to repository at https://github.com/DLTSolution/ERPCrypto.git
