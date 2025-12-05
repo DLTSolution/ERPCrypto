@@ -118,6 +118,26 @@ export async function registerRoutes(
     }
   });
 
+  // ============ PTAX ROUTES (PUBLIC) ============
+
+  app.get("/api/ptax", async (_req, res) => {
+    try {
+      const ptax = await storage.getPtaxRate();
+      res.json(ptax);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.get("/api/ptax/:date", async (req, res) => {
+    try {
+      const rate = await storage.getHistoricalPtaxRate(req.params.date);
+      res.json({ date: req.params.date, rate });
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // ============ CHARTS ROUTES (PUBLIC) ============
 
   app.get("/api/charts/:tokenId/:timeframe", async (req, res) => {
