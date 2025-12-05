@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, User, AlertCircle } from "lucide-react";
+import { Lock, Mail, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import dltLogo from "@assets/nowlogo512_1764941820446.png";
 
@@ -20,10 +20,11 @@ export function LoginModal() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
+  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({
-    username: "",
+    email: "",
     password: "",
     confirmPassword: "",
   });
@@ -31,18 +32,19 @@ export function LoginModal() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
     setIsLoading(true);
 
     try {
-      const success = await login(loginForm.username, loginForm.password);
-      if (success) {
+      const result = await login(loginForm.email, loginForm.password);
+      if (result.success) {
         toast({
           title: "Welcome back!",
           description: "Successfully logged in.",
         });
-        setLoginForm({ username: "", password: "" });
+        setLoginForm({ email: "", password: "" });
       } else {
-        setError("Invalid username or password");
+        setError(result.error || "Invalid email or password");
       }
     } catch {
       setError("An error occurred. Please try again.");
@@ -54,6 +56,7 @@ export function LoginModal() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
 
     if (registerForm.password !== registerForm.confirmPassword) {
       setError("Passwords do not match");
@@ -68,15 +71,19 @@ export function LoginModal() {
     setIsLoading(true);
 
     try {
-      const success = await register(registerForm.username, registerForm.password);
-      if (success) {
-        toast({
-          title: "Account created!",
-          description: "Welcome to DLT Solution.",
-        });
-        setRegisterForm({ username: "", password: "", confirmPassword: "" });
+      const result = await register(registerForm.email, registerForm.password);
+      if (result.success) {
+        if (result.error) {
+          setSuccessMessage(result.error);
+        } else {
+          toast({
+            title: "Account created!",
+            description: "Welcome to DLT Solution.",
+          });
+        }
+        setRegisterForm({ email: "", password: "", confirmPassword: "" });
       } else {
-        setError("Registration failed. Username may already exist.");
+        setError(result.error || "Registration failed. Please try again.");
       }
     } catch {
       setError("An error occurred. Please try again.");
@@ -115,18 +122,19 @@ export function LoginModal() {
           <TabsContent value="login" className="mt-4">
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-username">Username</Label>
+                <Label htmlFor="login-email">Email</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="login-username"
-                    placeholder="Enter username"
+                    id="login-email"
+                    type="email"
+                    placeholder="Enter email"
                     className="pl-10"
-                    value={loginForm.username}
+                    value={loginForm.email}
                     onChange={(e) =>
-                      setLoginForm({ ...loginForm, username: e.target.value })
+                      setLoginForm({ ...loginForm, email: e.target.value })
                     }
-                    data-testid="input-login-username"
+                    data-testid="input-login-email"
                     required
                   />
                 </div>
@@ -172,18 +180,19 @@ export function LoginModal() {
           <TabsContent value="register" className="mt-4">
             <form onSubmit={handleRegister} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="register-username">Username</Label>
+                <Label htmlFor="register-email">Email</Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="register-username"
-                    placeholder="Choose username"
+                    id="register-email"
+                    type="email"
+                    placeholder="Enter email"
                     className="pl-10"
-                    value={registerForm.username}
+                    value={registerForm.email}
                     onChange={(e) =>
-                      setRegisterForm({ ...registerForm, username: e.target.value })
+                      setRegisterForm({ ...registerForm, email: e.target.value })
                     }
-                    data-testid="input-register-username"
+                    data-testid="input-register-email"
                     required
                   />
                 </div>
@@ -234,6 +243,13 @@ export function LoginModal() {
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <span>{error}</span>
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 text-green-500 text-sm">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{successMessage}</span>
                 </div>
               )}
 
