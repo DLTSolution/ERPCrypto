@@ -48,17 +48,17 @@ export function LoginModal() {
   return (
     <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
       <DialogContent className="sm:max-w-md glass-strong">
-        <DialogHeader className="text-center space-y-4">
+        <DialogHeader className="text-center space-y-4 flex flex-col items-center">
           <img 
             src={dltLogo} 
             alt="DLT Solution" 
-            className="mx-auto w-16 h-16 rounded-xl"
+            className="w-16 h-16 rounded-xl"
           />
-          <DialogTitle className="text-2xl font-bold gradient-text">
+          <DialogTitle className="text-2xl font-bold gradient-text text-center">
             DLT Solution
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            DLT - DeFi Dashboard
+          <DialogDescription className="text-muted-foreground text-center">
+            DeFi Dashboard
           </DialogDescription>
         </DialogHeader>
 
