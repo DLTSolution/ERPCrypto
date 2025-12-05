@@ -1,0 +1,336 @@
+You are an expert AI front-end engineer and designer specialized in Web3, DeFi dashboards, crypto ERPs, and high-performance Next.js 16 applications.
+Your task is to generate the full front-end scaffold (no backend) of a new platform called ERPCrypto.
+Use: TypeScript, Next.js 16 App Router, TailwindCSS, Shadcn UI components, React Server Components where appropriate, and modern crypto-dashboard aesthetics (Nansen-style gradients, dark mode, glassmorphism, neon accents).
+All pages must be created under /app with proper routes, layouts, navigation, placeholder mock data, tables, and components.
+Do NOT connect to any real API. Use mocked sample data only.
+
+1. PROJECT OVERVIEW
+
+ERPCrypto is a hybrid crypto platform combining free tools (market data, pools monitor, charts) and authenticated tools (operations control, tax report, gain/loss, borrow/lend dashboard).
+
+Create a modern UI similar to Nansen, DefiLlama, Moralis Money, Zerion, etc.
+
+Main technologies:
+
+Next.js 16 (app router)
+
+TypeScript
+
+TailwindCSS
+
+Shadcn UI
+
+Lucide icons
+
+Reusable components
+
+Server Components where possible
+
+Mock data sources in /lib/mock/…
+
+2. GLOBAL LAYOUT REQUIREMENTS
+
+Create:
+
+Root dark theme layout with modern gradients
+
+Top Navbar
+
+Logo + "ERPCrypto"
+
+Right side: “Login / Account”
+
+Sidebar (collapsible) with the following sections:
+
+Public tools (no login required)
+
+/market → Market Overview
+
+/tools/pools-monitor → Pools Monitor (TVL, Volume, Efficiency)
+
+/tools/charts → TradingView-style candle chart viewer
+
+Protected tools (locked until login)
+
+Automatically show a “Please log in to access this feature” modal.
+
+/wallets → Wallet Registry
+
+/operations → Manual Operations Registry
+
+/borrow-lend → Borrow & Lending Dashboard
+
+/pools/user-pools → User Liquidity Pools Tracker
+
+/tax/report → IN 2991 Consolidated Fiscal Extract
+
+/tax/gain-loss → Capital Gains Calculator
+
+3. REQUIRED PAGES & COMPONENTS (GENERATE ALL)
+3.1 /market – Market Dashboard (free)
+
+Create a page with:
+
+Cards:
+
+Total Crypto Market Cap
+
+Bitcoin Dominance
+
+Fear & Greed Index
+
+Token list table:
+
+User can add/remove tokens (mock only)
+
+Columns: Token, Price, 24h %, Market Cap, Rank
+
+Automatically sorts by Market Cap
+
+Use mock API from /lib/mock/market.ts.
+
+3.2 /wallets – Wallet Registry (protected)
+
+Table:
+
+Wallet Name
+
+Address
+
+Actions: edit/delete
+
+Form modal to create/edit a wallet.
+No network selection.
+
+3.3 /tools/pools-monitor – Pools Monitor (free)
+
+Filters:
+
+Network (ETH, Solana, Base, Arbitrum…)
+
+DEX (Uniswap, Raydium, Orca…)
+
+Token pair
+
+Table columns:
+
+Pair
+
+Network
+
+DEX
+
+TVL
+
+24h Volume
+
+Efficiency (Volume/TVL)
+
+Use mocked data.
+
+3.4 /pools/user-pools – User Liquidity Pools Registry (protected)
+
+Inspired by Nansen / Revert Finance.
+
+Form fields:
+
+DEX
+
+Network
+
+Pair
+
+Entry Date
+
+Entry Value (USD & BRL)
+
+Price Range (min/max)
+
+Exit data (if closed)
+
+Fees earned
+
+Table shows:
+
+Duration
+
+Total Fees
+
+ROI
+
+Status (Open / Closed)
+
+3.5 /borrow-lend – Borrow & Lend Dashboard (protected)
+
+Two tables:
+
+Collateral table:
+
+Asset
+
+Amount
+
+USD value
+
+LTV
+
+Health factor
+
+Borrow table:
+
+Asset
+
+Borrowed amount
+
+Interest rate
+
+Value in USD
+
+Cards:
+
+Total Collateral
+
+Total Borrowed
+
+Health Factor Indicator
+
+3.6 /operations – Manual Operations Registry (protected)
+
+Operation types:
+
+Buy
+
+Sell
+
+Swap
+
+Transfer In
+
+Transfer Out
+
+Lost funds
+
+Fields required:
+
+Token Out
+
+Token In
+
+Amounts
+
+USD and BRL value (mock PTAX)
+
+Related wallet(s)
+
+System identifies:
+
+Internal transfer: if both wallets exist
+
+External transfer: if only one belongs to user
+
+Table showing all operations.
+
+3.7 /tax/report – Fiscal Extract IN 2991 (protected)
+
+This page must consolidate all operations from:
+
+User Pools
+
+Borrow/Lend
+
+General Operations
+
+Columns needed:
+
+Date
+
+Operation type
+
+Description
+
+USD value
+
+BRL value (using mock PTAX)
+
+Show monthly sum and highlight if > R$ 35.000.
+
+Include button:
+
+Export PDF (mock)
+
+Export JSON
+
+3.8 /tax/gain-loss – Capital Gains Calculator (protected)
+
+Calculate capital gains only for SELL operations (crypto → fiat).
+
+For each month:
+
+Sum total BRL from sells
+
+If > R$ 35.000
+
+Tax = 15%
+Show table with:
+
+Month
+
+Sell volume BRL
+
+Tax due BRL
+
+Use mock data.
+
+3.9 /tools/charts – Candle Chart Viewer (free)
+
+Embed TradingView Lightweight Charts via CDN or a React wrapper.
+
+User can:
+
+Select token (mock)
+
+Load candle chart
+
+Set timeframes
+
+Optional: draw basic trend lines
+
+4. DESIGN GUIDELINES
+
+Follow these:
+
+Dark mode only
+
+Gradients inspired by Nansen / Raydium / Jupiter / Moralis
+
+Glass-like panels
+
+Smooth animations
+
+Icons from Lucide
+
+Table styles matching Shadcn DataTable
+
+Components in /components/ui
+
+Store all mock data under /lib/mock/
+
+5. OUTPUT FORMAT
+
+Codex must output:
+
+Folder structure
+
+Every route under /app/...
+
+All components
+
+Mock data files
+
+Example tables with pagination, filters, modals
+
+Layout and sidebar
+
+Beautiful, modern UI
+
+Full code, ready to copy/paste
