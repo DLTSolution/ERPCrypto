@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Lock, User, CandlestickChart, AlertCircle } from "lucide-react";
+import { Lock, User, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import dltLogo from "@assets/nowlogo512_1764941820446.png";
 
 export function LoginModal() {
   const { showLoginModal, setShowLoginModal, login, register } = useAuth();
@@ -71,7 +72,7 @@ export function LoginModal() {
       if (success) {
         toast({
           title: "Account created!",
-          description: "Welcome to ERPCrypto.",
+          description: "Welcome to DLT Solution.",
         });
         setRegisterForm({ username: "", password: "", confirmPassword: "" });
       } else {
@@ -88,11 +89,13 @@ export function LoginModal() {
     <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
       <DialogContent className="sm:max-w-md glass-strong">
         <DialogHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center neon-glow-purple">
-            <CandlestickChart className="w-8 h-8 text-white" />
-          </div>
+          <img 
+            src={dltLogo} 
+            alt="DLT Solution" 
+            className="mx-auto w-16 h-16 rounded-xl"
+          />
           <DialogTitle className="text-2xl font-bold gradient-text">
-            ERPCrypto
+            DLT Solution
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             Access protected features by logging in or creating an account.
