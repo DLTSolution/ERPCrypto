@@ -98,7 +98,7 @@ export function LoginModal() {
             DLT Solution
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Access protected features by logging in or creating an account.
+            DLT - DeFi Dashboard
           </DialogDescription>
         </DialogHeader>
 
