@@ -13,7 +13,7 @@ import {
 // Session user type extension
 declare module "express-session" {
   interface SessionData {
-    userId?: string;
+    userId?: number;
   }
 }
 
@@ -29,9 +29,9 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // ============ AUTH ROUTES ============
-  
+
   app.post("/api/auth/register", async (req, res) => {
     try {
       const parsed = insertUserSchema.safeParse(req.body);
@@ -48,6 +48,7 @@ export async function registerRoutes(
       req.session.userId = user.id;
       res.json({ id: user.id, username: user.username });
     } catch (error) {
+      console.error("Register error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -64,6 +65,7 @@ export async function registerRoutes(
       req.session.userId = user.id;
       res.json({ id: user.id, username: user.username });
     } catch (error) {
+      console.error("Login error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
@@ -132,8 +134,8 @@ export async function registerRoutes(
 
   app.get("/api/wallets", requireAuth, async (req, res) => {
     try {
-      const wallets = await storage.getWallets(req.session.userId!);
-      res.json(wallets);
+      const walletList = await storage.getWallets(req.session.userId!);
+      res.json(walletList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
@@ -160,7 +162,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const wallet = await storage.updateWallet(req.params.id, parsed.data);
+      const wallet = await storage.updateWallet(parseInt(req.params.id), parsed.data);
       if (!wallet) {
         return res.status(404).json({ message: "Wallet not found" });
       }
@@ -172,7 +174,7 @@ export async function registerRoutes(
 
   app.delete("/api/wallets/:id", requireAuth, async (req, res) => {
     try {
-      const success = await storage.deleteWallet(req.params.id);
+      const success = await storage.deleteWallet(parseInt(req.params.id));
       if (!success) {
         return res.status(404).json({ message: "Wallet not found" });
       }
@@ -211,8 +213,8 @@ export async function registerRoutes(
 
   app.get("/api/collaterals", requireAuth, async (req, res) => {
     try {
-      const collaterals = await storage.getCollaterals(req.session.userId!);
-      res.json(collaterals);
+      const collateralList = await storage.getCollaterals(req.session.userId!);
+      res.json(collateralList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
@@ -236,8 +238,8 @@ export async function registerRoutes(
 
   app.get("/api/borrows", requireAuth, async (req, res) => {
     try {
-      const borrows = await storage.getBorrows(req.session.userId!);
-      res.json(borrows);
+      const borrowList = await storage.getBorrows(req.session.userId!);
+      res.json(borrowList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
@@ -261,8 +263,8 @@ export async function registerRoutes(
 
   app.get("/api/operations", requireAuth, async (req, res) => {
     try {
-      const operations = await storage.getOperations(req.session.userId!);
-      res.json(operations);
+      const operationList = await storage.getOperations(req.session.userId!);
+      res.json(operationList);
     } catch (error) {
       res.status(500).json({ message: "Server error" });
     }
@@ -275,11 +277,11 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid input" });
       }
 
-      const wallets = await storage.getWallets(req.session.userId!);
+      const userWallets = await storage.getWallets(req.session.userId!);
       const operation = await storage.createOperation(
         req.session.userId!,
         parsed.data,
-        wallets
+        userWallets
       );
       res.json(operation);
     } catch (error) {

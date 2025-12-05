@@ -1,37 +1,44 @@
-import { randomUUID } from "crypto";
-import type {
-  User,
-  InsertUser,
-  Wallet,
-  InsertWallet,
-  Token,
-  Pool,
-  UserPool,
-  InsertUserPool,
-  Collateral,
-  InsertCollateral,
-  Borrow,
-  InsertBorrow,
-  Operation,
-  InsertOperation,
-  TaxReportEntry,
-  CapitalGainsEntry,
-  MarketOverview,
-  Candle,
+import { eq, desc } from "drizzle-orm";
+import { db } from "./db";
+import {
+  users,
+  wallets,
+  userPools,
+  collaterals,
+  borrows,
+  operations,
+  type User,
+  type InsertUser,
+  type Wallet,
+  type InsertWallet,
+  type UserPool,
+  type InsertUserPool,
+  type Collateral,
+  type InsertCollateral,
+  type Borrow,
+  type InsertBorrow,
+  type Operation,
+  type InsertOperation,
+  type Token,
+  type Pool,
+  type MarketOverview,
+  type Candle,
+  type TaxReportEntry,
+  type CapitalGainsEntry,
 } from "@shared/schema";
 
 export interface IStorage {
   // Users
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
   // Wallets
-  getWallets(userId: string): Promise<Wallet[]>;
-  getWallet(id: string): Promise<Wallet | undefined>;
-  createWallet(userId: string, wallet: InsertWallet): Promise<Wallet>;
-  updateWallet(id: string, wallet: InsertWallet): Promise<Wallet | undefined>;
-  deleteWallet(id: string): Promise<boolean>;
+  getWallets(userId: number): Promise<Wallet[]>;
+  getWallet(id: number): Promise<Wallet | undefined>;
+  createWallet(userId: number, wallet: InsertWallet): Promise<Wallet>;
+  updateWallet(id: number, wallet: InsertWallet): Promise<Wallet | undefined>;
+  deleteWallet(id: number): Promise<boolean>;
 
   // Market Data
   getMarketOverview(): Promise<MarketOverview>;
@@ -40,27 +47,27 @@ export interface IStorage {
   getCandles(tokenId: string, timeframe: string): Promise<Candle[]>;
 
   // User Pools
-  getUserPools(userId: string): Promise<UserPool[]>;
-  createUserPool(userId: string, pool: InsertUserPool): Promise<UserPool>;
+  getUserPools(userId: number): Promise<UserPool[]>;
+  createUserPool(userId: number, pool: InsertUserPool): Promise<UserPool>;
 
   // Collaterals
-  getCollaterals(userId: string): Promise<Collateral[]>;
-  createCollateral(userId: string, collateral: InsertCollateral): Promise<Collateral>;
+  getCollaterals(userId: number): Promise<Collateral[]>;
+  createCollateral(userId: number, collateral: InsertCollateral): Promise<Collateral>;
 
   // Borrows
-  getBorrows(userId: string): Promise<Borrow[]>;
-  createBorrow(userId: string, borrow: InsertBorrow): Promise<Borrow>;
+  getBorrows(userId: number): Promise<Borrow[]>;
+  createBorrow(userId: number, borrow: InsertBorrow): Promise<Borrow>;
 
   // Operations
-  getOperations(userId: string): Promise<Operation[]>;
-  createOperation(userId: string, operation: InsertOperation, wallets: Wallet[]): Promise<Operation>;
+  getOperations(userId: number): Promise<Operation[]>;
+  createOperation(userId: number, operation: InsertOperation, userWallets: Wallet[]): Promise<Operation>;
 
   // Tax
-  getTaxReport(userId: string): Promise<TaxReportEntry[]>;
-  getCapitalGains(userId: string): Promise<CapitalGainsEntry[]>;
+  getTaxReport(userId: number): Promise<TaxReportEntry[]>;
+  getCapitalGains(userId: number): Promise<CapitalGainsEntry[]>;
 }
 
-// Mock data generators
+// Mock data generators for external APIs
 function generateMockTokens(): Token[] {
   return [
     { id: "bitcoin", symbol: "BTC", name: "Bitcoin", price: 97234.56, change24h: 2.34, marketCap: 1920000000000, rank: 1, volume24h: 48500000000 },
@@ -113,7 +120,7 @@ function generateMockPools(): Pool[] {
 }
 
 function generateMockCandles(basePrice: number): Candle[] {
-  const candles: Candle[] = [];
+  const candlesData: Candle[] = [];
   let price = basePrice;
   const now = Date.now();
 
@@ -127,79 +134,65 @@ function generateMockCandles(basePrice: number): Candle[] {
     const low = Math.min(open, close) - Math.random() * volatility * 0.5;
     const volume = Math.random() * 1000000;
 
-    candles.push({ time: Math.floor(time / 1000), open, high, low, close, volume });
+    candlesData.push({ time: Math.floor(time / 1000), open, high, low, close, volume });
     price = close;
   }
 
-  return candles;
+  return candlesData;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-  private wallets: Map<string, Wallet>;
-  private userPools: Map<string, UserPool>;
-  private collaterals: Map<string, Collateral>;
-  private borrows: Map<string, Borrow>;
-  private operations: Map<string, Operation>;
+// Database Storage Implementation
+export class DatabaseStorage implements IStorage {
   private tokens: Token[];
   private pools: Pool[];
 
   constructor() {
-    this.users = new Map();
-    this.wallets = new Map();
-    this.userPools = new Map();
-    this.collaterals = new Map();
-    this.borrows = new Map();
-    this.operations = new Map();
     this.tokens = generateMockTokens();
     this.pools = generateMockPools();
   }
 
   // Users
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find((u) => u.username === username);
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   // Wallets
-  async getWallets(userId: string): Promise<Wallet[]> {
-    return Array.from(this.wallets.values()).filter((w) => w.userId === userId);
+  async getWallets(userId: number): Promise<Wallet[]> {
+    return await db.select().from(wallets).where(eq(wallets.userId, userId));
   }
 
-  async getWallet(id: string): Promise<Wallet | undefined> {
-    return this.wallets.get(id);
+  async getWallet(id: number): Promise<Wallet | undefined> {
+    const [wallet] = await db.select().from(wallets).where(eq(wallets.id, id));
+    return wallet || undefined;
   }
 
-  async createWallet(userId: string, wallet: InsertWallet): Promise<Wallet> {
-    const id = randomUUID();
-    const newWallet: Wallet = { ...wallet, id, userId };
-    this.wallets.set(id, newWallet);
+  async createWallet(userId: number, wallet: InsertWallet): Promise<Wallet> {
+    const [newWallet] = await db.insert(wallets).values({ ...wallet, userId }).returning();
     return newWallet;
   }
 
-  async updateWallet(id: string, wallet: InsertWallet): Promise<Wallet | undefined> {
-    const existing = this.wallets.get(id);
-    if (!existing) return undefined;
-    const updated: Wallet = { ...existing, ...wallet };
-    this.wallets.set(id, updated);
-    return updated;
+  async updateWallet(id: number, wallet: InsertWallet): Promise<Wallet | undefined> {
+    const [updated] = await db.update(wallets).set(wallet).where(eq(wallets.id, id)).returning();
+    return updated || undefined;
   }
 
-  async deleteWallet(id: string): Promise<boolean> {
-    return this.wallets.delete(id);
+  async deleteWallet(id: number): Promise<boolean> {
+    const result = await db.delete(wallets).where(eq(wallets.id, id)).returning();
+    return result.length > 0;
   }
 
-  // Market Data
+  // Market Data (mock for now, will integrate with CoinGecko later)
   async getMarketOverview(): Promise<MarketOverview> {
     return {
       totalMarketCap: 3250000000000,
@@ -224,60 +217,54 @@ export class MemStorage implements IStorage {
   }
 
   // User Pools
-  async getUserPools(userId: string): Promise<UserPool[]> {
-    return Array.from(this.userPools.values()).filter((p) => p.userId === userId);
+  async getUserPools(userId: number): Promise<UserPool[]> {
+    return await db.select().from(userPools).where(eq(userPools.userId, userId));
   }
 
-  async createUserPool(userId: string, pool: InsertUserPool): Promise<UserPool> {
-    const id = randomUUID();
-    const newPool: UserPool = { ...pool, id, userId };
-    this.userPools.set(id, newPool);
+  async createUserPool(userId: number, pool: InsertUserPool): Promise<UserPool> {
+    const [newPool] = await db.insert(userPools).values({ ...pool, userId }).returning();
     return newPool;
   }
 
   // Collaterals
-  async getCollaterals(userId: string): Promise<Collateral[]> {
-    return Array.from(this.collaterals.values()).filter((c) => c.userId === userId);
+  async getCollaterals(userId: number): Promise<Collateral[]> {
+    return await db.select().from(collaterals).where(eq(collaterals.userId, userId));
   }
 
-  async createCollateral(userId: string, collateral: InsertCollateral): Promise<Collateral> {
-    const id = randomUUID();
-    const newCollateral: Collateral = { ...collateral, id, userId };
-    this.collaterals.set(id, newCollateral);
+  async createCollateral(userId: number, collateral: InsertCollateral): Promise<Collateral> {
+    const [newCollateral] = await db.insert(collaterals).values({ ...collateral, userId }).returning();
     return newCollateral;
   }
 
   // Borrows
-  async getBorrows(userId: string): Promise<Borrow[]> {
-    return Array.from(this.borrows.values()).filter((b) => b.userId === userId);
+  async getBorrows(userId: number): Promise<Borrow[]> {
+    return await db.select().from(borrows).where(eq(borrows.userId, userId));
   }
 
-  async createBorrow(userId: string, borrow: InsertBorrow): Promise<Borrow> {
-    const id = randomUUID();
-    const newBorrow: Borrow = { ...borrow, id, userId };
-    this.borrows.set(id, newBorrow);
+  async createBorrow(userId: number, borrow: InsertBorrow): Promise<Borrow> {
+    const [newBorrow] = await db.insert(borrows).values({ ...borrow, userId }).returning();
     return newBorrow;
   }
 
   // Operations
-  async getOperations(userId: string): Promise<Operation[]> {
-    return Array.from(this.operations.values())
-      .filter((o) => o.userId === userId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  async getOperations(userId: number): Promise<Operation[]> {
+    return await db
+      .select()
+      .from(operations)
+      .where(eq(operations.userId, userId))
+      .orderBy(desc(operations.date));
   }
 
   async createOperation(
-    userId: string,
+    userId: number,
     operation: InsertOperation,
-    wallets: Wallet[]
+    userWallets: Wallet[]
   ): Promise<Operation> {
-    const id = randomUUID();
-    
-    let transferType: "internal" | "external" | null = null;
+    let transferType: string | null = null;
     if (operation.type === "transfer_in" || operation.type === "transfer_out") {
-      const fromExists = operation.walletFrom && wallets.some((w) => w.id === operation.walletFrom);
-      const toExists = operation.walletTo && wallets.some((w) => w.id === operation.walletTo);
-      
+      const fromExists = operation.walletFrom && userWallets.some((w) => w.id.toString() === operation.walletFrom);
+      const toExists = operation.walletTo && userWallets.some((w) => w.id.toString() === operation.walletTo);
+
       if (fromExists && toExists) {
         transferType = "internal";
       } else {
@@ -285,32 +272,29 @@ export class MemStorage implements IStorage {
       }
     }
 
-    const newOperation: Operation = {
-      ...operation,
-      id,
-      userId,
-      transferType,
-    };
-    this.operations.set(id, newOperation);
+    const [newOperation] = await db
+      .insert(operations)
+      .values({ ...operation, userId, transferType })
+      .returning();
     return newOperation;
   }
 
   // Tax Reports
-  async getTaxReport(userId: string): Promise<TaxReportEntry[]> {
+  async getTaxReport(userId: number): Promise<TaxReportEntry[]> {
     const entries: TaxReportEntry[] = [];
-    
+
     // Add operations
-    const operations = await this.getOperations(userId);
-    for (const op of operations) {
+    const ops = await this.getOperations(userId);
+    for (const op of ops) {
       entries.push({
-        id: op.id,
+        id: op.id.toString(),
         date: op.date,
         operationType: op.type,
         description: op.description || `${op.type} ${op.tokenIn || op.tokenOut || ""}`.trim(),
         valueUsd: op.valueUsd,
         valueBrl: op.valueBrl,
         source: "operation",
-        sourceId: op.id,
+        sourceId: op.id.toString(),
       });
     }
 
@@ -324,9 +308,9 @@ export class MemStorage implements IStorage {
           operationType: "pool_fees",
           description: `Fees from ${pool.pair} pool on ${pool.dex}`,
           valueUsd: pool.feesEarned,
-          valueBrl: pool.feesEarned * 5.15, // Mock PTAX
+          valueBrl: pool.feesEarned * 5.15,
           source: "pool",
-          sourceId: pool.id,
+          sourceId: pool.id.toString(),
         });
       }
     }
@@ -334,9 +318,9 @@ export class MemStorage implements IStorage {
     return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
-  async getCapitalGains(userId: string): Promise<CapitalGainsEntry[]> {
-    const operations = await this.getOperations(userId);
-    const sellOps = operations.filter((op) => op.type === "sell");
+  async getCapitalGains(userId: number): Promise<CapitalGainsEntry[]> {
+    const ops = await this.getOperations(userId);
+    const sellOps = ops.filter((op) => op.type === "sell");
 
     // Group by month
     const monthlyData: Record<string, number> = {};
@@ -362,4 +346,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

@@ -1,34 +1,118 @@
+import { pgTable, text, integer, real, boolean, serial } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema
-export const userSchema = z.object({
-  id: z.string(),
-  username: z.string(),
-  password: z.string(),
+// ============ DATABASE TABLES ============
+
+// Users table
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
 });
 
-export const insertUserSchema = userSchema.pick({
+export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
 });
 
-export type User = z.infer<typeof userSchema>;
+export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-// Wallet schema
-export const walletSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  name: z.string(),
-  address: z.string(),
+// Wallets table
+export const wallets = pgTable("wallets", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
 });
 
-export const insertWalletSchema = walletSchema.omit({ id: true, userId: true });
+export const insertWalletSchema = createInsertSchema(wallets).omit({ id: true, userId: true });
 
-export type Wallet = z.infer<typeof walletSchema>;
+export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = z.infer<typeof insertWalletSchema>;
 
-// Token/Market Data schema
+// User Pools table (liquidity positions)
+export const userPools = pgTable("user_pools", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  dex: text("dex").notNull(),
+  network: text("network").notNull(),
+  pair: text("pair").notNull(),
+  entryDate: text("entry_date").notNull(),
+  entryValueUsd: real("entry_value_usd").notNull(),
+  entryValueBrl: real("entry_value_brl").notNull(),
+  priceRangeMin: real("price_range_min").notNull(),
+  priceRangeMax: real("price_range_max").notNull(),
+  exitDate: text("exit_date"),
+  exitValueUsd: real("exit_value_usd"),
+  exitValueBrl: real("exit_value_brl"),
+  feesEarned: real("fees_earned").notNull().default(0),
+  status: text("status").notNull().default("open"),
+});
+
+export const insertUserPoolSchema = createInsertSchema(userPools).omit({ id: true, userId: true });
+
+export type UserPool = typeof userPools.$inferSelect;
+export type InsertUserPool = z.infer<typeof insertUserPoolSchema>;
+
+// Collaterals table
+export const collaterals = pgTable("collaterals", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  asset: text("asset").notNull(),
+  amount: real("amount").notNull(),
+  valueUsd: real("value_usd").notNull(),
+  ltv: real("ltv").notNull(),
+  healthFactor: real("health_factor").notNull(),
+});
+
+export const insertCollateralSchema = createInsertSchema(collaterals).omit({ id: true, userId: true });
+
+export type Collateral = typeof collaterals.$inferSelect;
+export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
+
+// Borrows table
+export const borrows = pgTable("borrows", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  asset: text("asset").notNull(),
+  borrowedAmount: real("borrowed_amount").notNull(),
+  interestRate: real("interest_rate").notNull(),
+  valueUsd: real("value_usd").notNull(),
+});
+
+export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, userId: true });
+
+export type Borrow = typeof borrows.$inferSelect;
+export type InsertBorrow = z.infer<typeof insertBorrowSchema>;
+
+// Operations table
+export const operations = pgTable("operations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(), // buy, sell, swap, transfer_in, transfer_out, lost_funds
+  tokenOut: text("token_out"),
+  tokenIn: text("token_in"),
+  amountOut: real("amount_out"),
+  amountIn: real("amount_in"),
+  valueUsd: real("value_usd").notNull(),
+  valueBrl: real("value_brl").notNull(),
+  walletFrom: text("wallet_from"),
+  walletTo: text("wallet_to"),
+  date: text("date").notNull(),
+  description: text("description"),
+  transferType: text("transfer_type"), // internal, external
+});
+
+export const insertOperationSchema = createInsertSchema(operations).omit({ id: true, userId: true, transferType: true });
+
+export type Operation = typeof operations.$inferSelect;
+export type InsertOperation = z.infer<typeof insertOperationSchema>;
+
+// ============ NON-DATABASE TYPES (API responses) ============
+
+// Token/Market Data (from external API)
 export const tokenSchema = z.object({
   id: z.string(),
   symbol: z.string(),
@@ -43,7 +127,7 @@ export const tokenSchema = z.object({
 
 export type Token = z.infer<typeof tokenSchema>;
 
-// Pool schema (for pools monitor)
+// Pool schema (for pools monitor - external data)
 export const poolSchema = z.object({
   id: z.string(),
   pair: z.string(),
@@ -59,85 +143,7 @@ export const poolSchema = z.object({
 
 export type Pool = z.infer<typeof poolSchema>;
 
-// User Pool (liquidity position)
-export const userPoolSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  dex: z.string(),
-  network: z.string(),
-  pair: z.string(),
-  entryDate: z.string(),
-  entryValueUsd: z.number(),
-  entryValueBrl: z.number(),
-  priceRangeMin: z.number(),
-  priceRangeMax: z.number(),
-  exitDate: z.string().nullable(),
-  exitValueUsd: z.number().nullable(),
-  exitValueBrl: z.number().nullable(),
-  feesEarned: z.number(),
-  status: z.enum(["open", "closed"]),
-});
-
-export const insertUserPoolSchema = userPoolSchema.omit({ id: true, userId: true });
-
-export type UserPool = z.infer<typeof userPoolSchema>;
-export type InsertUserPool = z.infer<typeof insertUserPoolSchema>;
-
-// Collateral schema
-export const collateralSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  asset: z.string(),
-  amount: z.number(),
-  valueUsd: z.number(),
-  ltv: z.number(),
-  healthFactor: z.number(),
-});
-
-export const insertCollateralSchema = collateralSchema.omit({ id: true, userId: true });
-
-export type Collateral = z.infer<typeof collateralSchema>;
-export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
-
-// Borrow schema
-export const borrowSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  asset: z.string(),
-  borrowedAmount: z.number(),
-  interestRate: z.number(),
-  valueUsd: z.number(),
-});
-
-export const insertBorrowSchema = borrowSchema.omit({ id: true, userId: true });
-
-export type Borrow = z.infer<typeof borrowSchema>;
-export type InsertBorrow = z.infer<typeof insertBorrowSchema>;
-
-// Operation schema
-export const operationSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  type: z.enum(["buy", "sell", "swap", "transfer_in", "transfer_out", "lost_funds"]),
-  tokenOut: z.string().nullable(),
-  tokenIn: z.string().nullable(),
-  amountOut: z.number().nullable(),
-  amountIn: z.number().nullable(),
-  valueUsd: z.number(),
-  valueBrl: z.number(),
-  walletFrom: z.string().nullable(),
-  walletTo: z.string().nullable(),
-  date: z.string(),
-  description: z.string().optional(),
-  transferType: z.enum(["internal", "external"]).nullable(),
-});
-
-export const insertOperationSchema = operationSchema.omit({ id: true, userId: true, transferType: true });
-
-export type Operation = z.infer<typeof operationSchema>;
-export type InsertOperation = z.infer<typeof insertOperationSchema>;
-
-// Tax Report Entry
+// Tax Report Entry (computed)
 export const taxReportEntrySchema = z.object({
   id: z.string(),
   date: z.string(),
@@ -151,7 +157,7 @@ export const taxReportEntrySchema = z.object({
 
 export type TaxReportEntry = z.infer<typeof taxReportEntrySchema>;
 
-// Capital Gains Entry
+// Capital Gains Entry (computed)
 export const capitalGainsEntrySchema = z.object({
   month: z.string(),
   sellVolumeBrl: z.number(),
@@ -161,7 +167,7 @@ export const capitalGainsEntrySchema = z.object({
 
 export type CapitalGainsEntry = z.infer<typeof capitalGainsEntrySchema>;
 
-// Market Overview
+// Market Overview (from external API)
 export const marketOverviewSchema = z.object({
   totalMarketCap: z.number(),
   btcDominance: z.number(),
