@@ -485,7 +485,8 @@ export default function Operations() {
                       id="tokenIn"
                       placeholder="e.g., BTC"
                       value={formData.tokenIn || ""}
-                      onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value.toUpperCase() })}
+                      className="uppercase"
                       data-testid="input-token-in"
                     />
                   </div>
@@ -495,9 +496,10 @@ export default function Operations() {
                       id="amountIn"
                       type="number"
                       step="0.00000001"
-                      value={formData.amountIn || ""}
+                      placeholder="0.00000000"
+                      value={formData.amountIn ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountIn: parseFloat(e.target.value) || null })
+                        setFormData({ ...formData, amountIn: e.target.value ? parseFloat(e.target.value) : null })
                       }
                       data-testid="input-amount-in"
                     />
@@ -511,9 +513,9 @@ export default function Operations() {
                       type="number"
                       step="0.01"
                       placeholder="0.00"
-                      value={formData.priceUsd || ""}
+                      value={formData.priceUsd ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, priceUsd: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-price-usd"
                     />
@@ -524,9 +526,10 @@ export default function Operations() {
                       id="valueUsd"
                       type="number"
                       step="0.01"
-                      value={formData.valueUsd || ""}
+                      placeholder="0.00"
+                      value={formData.valueUsd ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, valueUsd: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-value-usd"
                       required
@@ -542,7 +545,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -552,10 +556,10 @@ export default function Operations() {
                         id="amountFee"
                         type="number"
                         step="0.00000001"
-                        placeholder="0.00"
-                        value={formData.amountFee || ""}
+                        placeholder="0.00000000"
+                        value={formData.amountFee ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: e.target.value ? parseFloat(e.target.value) : 0 })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -567,9 +571,9 @@ export default function Operations() {
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
+                        value={formData.feeValueUsd ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: e.target.value ? parseFloat(e.target.value) : 0 })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -583,10 +587,10 @@ export default function Operations() {
                       id="ptax"
                       type="number"
                       step="0.0001"
-                      placeholder="5.50"
-                      value={formData.ptax || ""}
+                      placeholder="0.0000"
+                      value={formData.ptax ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-ptax"
                     />
@@ -597,9 +601,10 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.totalValueBrl || ""}
+                      placeholder="0.00"
+                      value={formData.totalValueBrl ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -619,7 +624,8 @@ export default function Operations() {
                       id="tokenOut"
                       placeholder="e.g., BTC"
                       value={formData.tokenOut || ""}
-                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value.toUpperCase() })}
+                      className="uppercase"
                       data-testid="input-token-out"
                     />
                   </div>
@@ -629,9 +635,10 @@ export default function Operations() {
                       id="amountOut"
                       type="number"
                       step="0.00000001"
-                      value={formData.amountOut || ""}
+                      placeholder="0.00000000"
+                      value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                        setFormData({ ...formData, amountOut: e.target.value ? parseFloat(e.target.value) : null })
                       }
                       data-testid="input-amount-out"
                     />
@@ -645,9 +652,9 @@ export default function Operations() {
                       type="number"
                       step="0.01"
                       placeholder="0.00"
-                      value={formData.priceUsd || ""}
+                      value={formData.priceUsd ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, priceUsd: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-price-usd"
                     />
@@ -658,9 +665,10 @@ export default function Operations() {
                       id="valueUsd"
                       type="number"
                       step="0.01"
-                      value={formData.valueUsd || ""}
+                      placeholder="0.00"
+                      value={formData.valueUsd ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, valueUsd: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-value-usd"
                       required
@@ -676,7 +684,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -686,10 +695,10 @@ export default function Operations() {
                         id="amountFee"
                         type="number"
                         step="0.00000001"
-                        placeholder="0.00"
-                        value={formData.amountFee || ""}
+                        placeholder="0.00000000"
+                        value={formData.amountFee ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: e.target.value ? parseFloat(e.target.value) : 0 })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -701,9 +710,9 @@ export default function Operations() {
                         type="number"
                         step="0.01"
                         placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
+                        value={formData.feeValueUsd ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: e.target.value ? parseFloat(e.target.value) : 0 })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -717,10 +726,10 @@ export default function Operations() {
                       id="ptax"
                       type="number"
                       step="0.0001"
-                      placeholder="5.50"
-                      value={formData.ptax || ""}
+                      placeholder="0.0000"
+                      value={formData.ptax ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-ptax"
                     />
@@ -731,9 +740,10 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.totalValueBrl || ""}
+                      placeholder="0.00"
+                      value={formData.totalValueBrl ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: e.target.value ? parseFloat(e.target.value) : 0 })
                       }
                       data-testid="input-value-brl"
                       required
