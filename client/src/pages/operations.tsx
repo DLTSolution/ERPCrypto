@@ -115,16 +115,16 @@ export default function Operations() {
     hash: string;
     date: string;
     tokenIn: string;
-    amountIn: number | null;
+    amountIn: string | number | null;
     tokenOut: string;
-    amountOut: number | null;
-    priceUsd: number;
-    valueUsd: number;
+    amountOut: string | number | null;
+    priceUsd: string | number;
+    valueUsd: string | number;
     feeToken: string;
-    amountFee: number;
-    feeValueUsd: number;
-    ptax: number;
-    totalValueBrl: number;
+    amountFee: string | number;
+    feeValueUsd: string | number;
+    ptax: string | number;
+    totalValueBrl: string | number;
     walletFrom: string;
     walletTo: string;
     description: string;
@@ -134,16 +134,16 @@ export default function Operations() {
     hash: "",
     date: new Date().toISOString().split("T")[0],
     tokenIn: "",
-    amountIn: null,
+    amountIn: "",
     tokenOut: "",
-    amountOut: null,
-    priceUsd: 0,
-    valueUsd: 0,
+    amountOut: "",
+    priceUsd: "",
+    valueUsd: "",
     feeToken: "",
-    amountFee: 0,
-    feeValueUsd: 0,
-    ptax: 0,
-    totalValueBrl: 0,
+    amountFee: "",
+    feeValueUsd: "",
+    ptax: "",
+    totalValueBrl: "",
     walletFrom: "",
     walletTo: "",
     description: "",
@@ -179,16 +179,16 @@ export default function Operations() {
       hash: "",
       date: new Date().toISOString().split("T")[0],
       tokenIn: "",
-      amountIn: null,
+      amountIn: "",
       tokenOut: "",
-      amountOut: null,
-      priceUsd: 0,
-      valueUsd: 0,
+      amountOut: "",
+      priceUsd: "",
+      valueUsd: "",
       feeToken: "",
-      amountFee: 0,
-      feeValueUsd: 0,
-      ptax: 0,
-      totalValueBrl: 0,
+      amountFee: "",
+      feeValueUsd: "",
+      ptax: "",
+      totalValueBrl: "",
       walletFrom: "",
       walletTo: "",
       description: "",
@@ -541,9 +541,13 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00000000"
                       value={formData.amountIn ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amountIn: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newAmount = handleDecimalInput(e.target.value);
+                        const amountNum = parseDecimalValueNullable(newAmount);
+                        const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                        const calculatedValue = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountIn: newAmount, valueUsd: calculatedValue });
+                      }}
                       data-testid="input-amount-in"
                     />
                   </div>
@@ -557,9 +561,13 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPrice = handleDecimalInput(e.target.value);
+                        const priceNum = parseDecimalValueNullable(newPrice);
+                        const amountNum = parseDecimalValueNullable(formData.amountIn);
+                        const calculatedValue = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValue });
+                      }}
                       data-testid="input-price-usd"
                     />
                   </div>
@@ -568,14 +576,11 @@ export default function Operations() {
                     <Input
                       id="valueUsd"
                       type="text"
-                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-usd"
-                      required
                     />
                   </div>
                 </div>
