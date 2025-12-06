@@ -65,6 +65,24 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function normalizeDecimal(value: string): string {
+  return value.replace(",", ".");
+}
+
+function parseDecimalInput(value: string, fallback: number = 0): number {
+  const normalized = normalizeDecimal(value);
+  if (normalized === "" || normalized === ".") return fallback;
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+function parseDecimalInputNullable(value: string): number | null {
+  const normalized = normalizeDecimal(value);
+  if (normalized === "" || normalized === ".") return null;
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? null : parsed;
+}
+
 export default function Operations() {
   const { isAuthenticated, setShowLoginModal } = useAuth();
   const { toast } = useToast();
