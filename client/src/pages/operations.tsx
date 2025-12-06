@@ -728,35 +728,19 @@ export default function Operations() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="valueUsd">Value (USD)</Label>
-                    <Input
-                      id="valueUsd"
-                      type="number"
-                      step="0.01"
-                      value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
-                      }
-                      data-testid="input-value-usd"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
-                    <Input
-                      id="valueBrl"
-                      type="number"
-                      step="0.01"
-                      value={formData.valueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
-                      }
-                      data-testid="input-value-brl"
-                      required
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valueUsd">Value (USD)</Label>
+                  <Input
+                    id="valueUsd"
+                    type="number"
+                    step="0.01"
+                    value={formData.valueUsd || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                    }
+                    data-testid="input-value-usd"
+                    required
+                  />
                 </div>
 
                 <div className="border-t border-border/50 pt-4 mt-4">
@@ -800,6 +784,37 @@ export default function Operations() {
                         data-testid="input-fee-value-usd"
                       />
                     </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ptax">PTAX</Label>
+                    <Input
+                      id="ptax"
+                      type="number"
+                      step="0.0001"
+                      placeholder="5.50"
+                      value={formData.ptax || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-ptax"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
+                    <Input
+                      id="valueBrl"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueBrl || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-brl"
+                      required
+                    />
                   </div>
                 </div>
 
