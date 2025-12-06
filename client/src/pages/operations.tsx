@@ -109,6 +109,8 @@ export default function Operations() {
   const { isAuthenticated, setShowLoginModal } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [ptaxLoading, setPtaxLoading] = useState(false);
+  const [ptaxError, setPtaxError] = useState<string | null>(null);
   const [formData, setFormData] = useState<{
     type: string;
     chain: string;
@@ -193,6 +195,54 @@ export default function Operations() {
       walletTo: "",
       description: "",
     });
+    setPtaxError(null);
+  };
+
+  const fetchPtaxForDate = async (date: string) => {
+    if (!date) return;
+    
+    setPtaxLoading(true);
+    setPtaxError(null);
+    
+    try {
+      const response = await fetch(`/api/ptax/${date}`);
+      const data = await response.json();
+      
+      if (data.source === "error" || data.rate === null) {
+        setPtaxError(data.errorMessage || "PTAX not available for this date. Please enter manually.");
+        setFormData(prev => ({ 
+          ...prev, 
+          date,
+          ptax: "",
+          totalValueBrl: ""
+        }));
+        return;
+      }
+      
+      const ptaxValue = data.rate.toFixed(4);
+      
+      setFormData(prev => {
+        const valueUsdNum = parseDecimalValueNullable(prev.valueUsd);
+        const feeNum = parseDecimalValueNullable(prev.feeValueUsd) || 0;
+        const calculatedBrl = (valueUsdNum !== null) ? ((valueUsdNum + feeNum) * data.rate).toFixed(2) : "";
+        return { 
+          ...prev, 
+          date,
+          ptax: ptaxValue,
+          totalValueBrl: calculatedBrl
+        };
+      });
+    } catch (error) {
+      setPtaxError("Failed to fetch PTAX. Please enter manually.");
+      setFormData(prev => ({ 
+        ...prev, 
+        date,
+        ptax: "",
+        totalValueBrl: ""
+      }));
+    } finally {
+      setPtaxLoading(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -512,7 +562,11 @@ export default function Operations() {
                 id="date"
                 type="date"
                 value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setFormData({ ...formData, date: newDate });
+                  fetchPtaxForDate(newDate);
+                }}
                 data-testid="input-date"
                 required
               />
@@ -643,12 +697,15 @@ export default function Operations() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
                     <Input
                       id="ptax"
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.0000"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
                       value={formData.ptax || ""}
                       onChange={(e) => {
                         const newPtax = handleDecimalInput(e.target.value);
@@ -657,9 +714,17 @@ export default function Operations() {
                         const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
                         const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
                         setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
                       }}
+                      className={ptaxError ? "border-amber-500" : ""}
                       data-testid="input-ptax"
                     />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
