@@ -823,14 +823,14 @@ export default function Operations() {
                     <div className="space-y-2">
                       <Label>Wallet From</Label>
                       <Select
-                        value={formData.walletFrom || ""}
-                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v || null })}
+                        value={formData.walletFrom || "external"}
+                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? null : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-from">
                           <SelectValue placeholder="Select wallet" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">External</SelectItem>
+                          <SelectItem value="external">External</SelectItem>
                           {wallets.map((w) => (
                             <SelectItem key={w.id} value={String(w.id)}>
                               {w.name}
@@ -842,14 +842,14 @@ export default function Operations() {
                     <div className="space-y-2">
                       <Label>Wallet To</Label>
                       <Select
-                        value={formData.walletTo || ""}
-                        onValueChange={(v) => setFormData({ ...formData, walletTo: v || null })}
+                        value={formData.walletTo || "external"}
+                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? null : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-to">
                           <SelectValue placeholder="Select wallet" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">External</SelectItem>
+                          <SelectItem value="external">External</SelectItem>
                           {wallets.map((w) => (
                             <SelectItem key={w.id} value={String(w.id)}>
                               {w.name}
