@@ -69,6 +69,28 @@ function normalizeDecimal(value: string): string {
   return value.replace(",", ".");
 }
 
+function handleDecimalInput(value: string): string {
+  return normalizeDecimal(value);
+}
+
+function parseDecimalValue(value: string | number | null | undefined, fallback: number = 0): number {
+  if (value === null || value === undefined || value === "") return fallback;
+  if (typeof value === "number") return value;
+  const normalized = normalizeDecimal(value);
+  if (normalized === "" || normalized === ".") return fallback;
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? fallback : parsed;
+}
+
+function parseDecimalValueNullable(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return value;
+  const normalized = normalizeDecimal(value);
+  if (normalized === "" || normalized === ".") return null;
+  const parsed = parseFloat(normalized);
+  return isNaN(parsed) ? null : parsed;
+}
+
 function parseDecimalInput(value: string, fallback: number = 0): number {
   const normalized = normalizeDecimal(value);
   if (normalized === "" || normalized === ".") return fallback;
@@ -176,19 +198,22 @@ export default function Operations() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const formatAmount = (value: number | null | undefined): number | null => {
-      if (value === null || value === undefined) return null;
-      return parseFloat(value.toFixed(8));
+    const formatAmount = (value: string | number | null | undefined): number | null => {
+      const num = parseDecimalValueNullable(value);
+      if (num === null) return null;
+      return parseFloat(num.toFixed(8));
     };
     
-    const formatPrice = (value: number | null | undefined): number | null => {
-      if (value === null || value === undefined) return null;
-      return parseFloat(value.toFixed(2));
+    const formatPrice = (value: string | number | null | undefined): number | null => {
+      const num = parseDecimalValueNullable(value);
+      if (num === null) return null;
+      return parseFloat(num.toFixed(2));
     };
     
-    const formatPtax = (value: number | null | undefined): number | null => {
-      if (value === null || value === undefined) return null;
-      return parseFloat(value.toFixed(4));
+    const formatPtax = (value: string | number | null | undefined): number | null => {
+      const num = parseDecimalValueNullable(value);
+      if (num === null) return null;
+      return parseFloat(num.toFixed(4));
     };
     
     const submitData: InsertOperation = {
@@ -517,7 +542,7 @@ export default function Operations() {
                       placeholder="0.00000000"
                       value={formData.amountIn ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountIn: parseDecimalInputNullable(e.target.value) })
+                        setFormData({ ...formData, amountIn: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-amount-in"
                     />
@@ -533,7 +558,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -547,7 +572,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -577,7 +602,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -591,7 +616,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -608,7 +633,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -622,7 +647,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -656,7 +681,7 @@ export default function Operations() {
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
+                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -672,7 +697,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -686,7 +711,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -716,7 +741,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -730,7 +755,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -747,7 +772,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -761,7 +786,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -795,7 +820,7 @@ export default function Operations() {
                       placeholder="0.00000000"
                       value={formData.amountIn ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountIn: parseDecimalInputNullable(e.target.value) })
+                        setFormData({ ...formData, amountIn: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-amount-in"
                     />
@@ -811,7 +836,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -825,7 +850,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -855,7 +880,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -869,7 +894,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -886,7 +911,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -900,7 +925,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -976,7 +1001,7 @@ export default function Operations() {
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
+                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -992,7 +1017,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -1006,7 +1031,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -1036,7 +1061,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1050,7 +1075,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1067,7 +1092,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1081,7 +1106,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1157,7 +1182,7 @@ export default function Operations() {
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
+                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -1173,7 +1198,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -1187,7 +1212,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -1217,7 +1242,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1231,7 +1256,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1248,7 +1273,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1262,7 +1287,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1296,7 +1321,7 @@ export default function Operations() {
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
+                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -1312,7 +1337,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -1326,7 +1351,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -1356,7 +1381,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1370,7 +1395,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1387,7 +1412,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1401,7 +1426,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1436,7 +1461,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountOut ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
+                          setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-out"
                       />
@@ -1466,7 +1491,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountIn ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountIn: parseDecimalInputNullable(e.target.value) })
+                          setFormData({ ...formData, amountIn: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-in"
                       />
@@ -1483,7 +1508,7 @@ export default function Operations() {
                     placeholder="0.00"
                     value={formData.valueUsd || ""}
                     onChange={(e) =>
-                      setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
+                      setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
                     }
                     data-testid="input-value-usd"
                     required
@@ -1513,7 +1538,7 @@ export default function Operations() {
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1527,7 +1552,7 @@ export default function Operations() {
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1545,7 +1570,7 @@ export default function Operations() {
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1559,7 +1584,7 @@ export default function Operations() {
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
