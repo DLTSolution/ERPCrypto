@@ -535,8 +535,142 @@ export default function Operations() {
               </>
             )}
 
-            {/* OTHER TYPES: Existing logic for sell, swap, transfer, lost_funds */}
-            {formData.type !== "buy" && (
+            {/* SELL: Token Out, Amount Out, Price USD, Value USD, Fee, PTAX, BRL */}
+            {formData.type === "sell" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tokenOut">Token Out</Label>
+                    <Input
+                      id="tokenOut"
+                      placeholder="e.g., BTC"
+                      value={formData.tokenOut || ""}
+                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                      data-testid="input-token-out"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amountOut">Amount Out</Label>
+                    <Input
+                      id="amountOut"
+                      type="number"
+                      step="0.00000001"
+                      value={formData.amountOut || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                      }
+                      data-testid="input-amount-out"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceUsd">Price (USD)</Label>
+                    <Input
+                      id="priceUsd"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.priceUsd || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-price-usd"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueUsd">Value (USD)</Label>
+                    <Input
+                      id="valueUsd"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueUsd || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-usd"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="border-t border-border/50 pt-4 mt-4">
+                  <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="feeToken">Fee Token</Label>
+                      <Input
+                        id="feeToken"
+                        placeholder="e.g., ETH"
+                        value={formData.feeToken || ""}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        data-testid="input-fee-token"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountFee">Amount Fee</Label>
+                      <Input
+                        id="amountFee"
+                        type="number"
+                        step="0.00000001"
+                        placeholder="0.00"
+                        value={formData.amountFee || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                        }
+                        data-testid="input-amount-fee"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
+                      <Input
+                        id="feeValueUsd"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.feeValueUsd || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                        }
+                        data-testid="input-fee-value-usd"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ptax">PTAX</Label>
+                    <Input
+                      id="ptax"
+                      type="number"
+                      step="0.0001"
+                      placeholder="5.50"
+                      value={formData.ptax || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-ptax"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
+                    <Input
+                      id="valueBrl"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueBrl || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-brl"
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* OTHER TYPES: Existing logic for swap, transfer, p2p, payments, lost_funds */}
+            {!["buy", "sell"].includes(formData.type || "") && (
               <>
                 {needsTokenOut && (
                   <div className="grid grid-cols-2 gap-4">
