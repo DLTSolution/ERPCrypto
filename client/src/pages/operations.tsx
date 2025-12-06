@@ -512,7 +512,7 @@ export default function Operations() {
                       id="priceUsd"
                       type="number"
                       step="0.01"
-                      placeholder="98000.98"
+                      placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, priceUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -526,7 +526,7 @@ export default function Operations() {
                       id="valueUsd"
                       type="number"
                       step="0.01"
-                      placeholder="1000.00"
+                      placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, valueUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -587,7 +587,7 @@ export default function Operations() {
                       id="ptax"
                       type="number"
                       step="0.0001"
-                      placeholder="5.5000"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, ptax: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -601,7 +601,7 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      placeholder="5500.00"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, totalValueBrl: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -651,7 +651,7 @@ export default function Operations() {
                       id="priceUsd"
                       type="number"
                       step="0.01"
-                      placeholder="98000.98"
+                      placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, priceUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -665,7 +665,7 @@ export default function Operations() {
                       id="valueUsd"
                       type="number"
                       step="0.01"
-                      placeholder="1000.00"
+                      placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, valueUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -726,7 +726,7 @@ export default function Operations() {
                       id="ptax"
                       type="number"
                       step="0.0001"
-                      placeholder="5.5000"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, ptax: e.target.value === "" ? 0 : parseFloat(e.target.value) })
@@ -740,7 +740,7 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      placeholder="5500.00"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
                         setFormData({ ...formData, totalValueBrl: e.target.value === "" ? 0 : parseFloat(e.target.value) })
