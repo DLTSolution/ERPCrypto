@@ -274,6 +274,7 @@ export async function registerRoutes(
       const operationList = await storage.getOperationsBySupabaseId(req.supabaseUserId!);
       res.json(operationList);
     } catch (error) {
+      console.error("GET /api/operations error:", error);
       res.status(500).json({ message: "Server error" });
     }
   });
