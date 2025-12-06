@@ -158,22 +158,37 @@ export default function Operations() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const formatAmount = (value: number | null | undefined): number | null => {
+      if (value === null || value === undefined) return null;
+      return parseFloat(value.toFixed(8));
+    };
+    
+    const formatPrice = (value: number | null | undefined): number | null => {
+      if (value === null || value === undefined) return null;
+      return parseFloat(value.toFixed(2));
+    };
+    
+    const formatPtax = (value: number | null | undefined): number | null => {
+      if (value === null || value === undefined) return null;
+      return parseFloat(value.toFixed(4));
+    };
+    
     const submitData: InsertOperation = {
       type: formData.type,
       chain: formData.chain || null,
       hash: formData.hash || null,
       date: formData.date,
       tokenIn: formData.tokenIn ? formData.tokenIn.toUpperCase() : null,
-      amountIn: formData.amountIn !== null ? parseFloat(formData.amountIn.toFixed(8)) : null,
+      amountIn: formatAmount(formData.amountIn),
       tokenOut: formData.tokenOut ? formData.tokenOut.toUpperCase() : null,
-      amountOut: formData.amountOut !== null ? parseFloat(formData.amountOut.toFixed(8)) : null,
-      priceUsd: formData.priceUsd ? parseFloat(formData.priceUsd.toFixed(2)) : null,
-      valueUsd: parseFloat(formData.valueUsd.toFixed(2)),
+      amountOut: formatAmount(formData.amountOut),
+      priceUsd: formatPrice(formData.priceUsd),
+      valueUsd: formatPrice(formData.valueUsd) ?? 0,
       feeToken: formData.feeToken ? formData.feeToken.toUpperCase() : null,
-      amountFee: formData.amountFee ? parseFloat(formData.amountFee.toFixed(8)) : null,
-      feeValueUsd: formData.feeValueUsd ? parseFloat(formData.feeValueUsd.toFixed(2)) : null,
-      ptax: formData.ptax ? parseFloat(formData.ptax.toFixed(4)) : null,
-      totalValueBrl: parseFloat(formData.totalValueBrl.toFixed(2)),
+      amountFee: formatAmount(formData.amountFee),
+      feeValueUsd: formatPrice(formData.feeValueUsd),
+      ptax: formatPtax(formData.ptax),
+      totalValueBrl: formatPrice(formData.totalValueBrl) ?? 0,
       details: {
         walletFrom: formData.walletFrom || null,
         walletTo: formData.walletTo || null,
