@@ -556,10 +556,12 @@ export class DatabaseStorage implements IStorage {
     operation: InsertOperation,
     userWallets: Wallet[]
   ): Promise<Operation> {
+    const details = operation.details || {};
     let transferType: string | null = null;
+    
     if (operation.type === "transfer_in" || operation.type === "transfer_out") {
-      const fromExists = operation.walletFrom && userWallets.some((w) => w.id.toString() === operation.walletFrom);
-      const toExists = operation.walletTo && userWallets.some((w) => w.id.toString() === operation.walletTo);
+      const fromExists = details.walletFrom && userWallets.some((w) => w.id.toString() === details.walletFrom);
+      const toExists = details.walletTo && userWallets.some((w) => w.id.toString() === details.walletTo);
 
       if (fromExists && toExists) {
         transferType = "internal";
@@ -568,9 +570,15 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    const detailsWithTransferType = { ...details, transferType };
+
     const [newOperation] = await db
       .insert(operations)
-      .values({ ...operation, userId, transferType })
+      .values({ 
+        ...operation, 
+        userId, 
+        details: detailsWithTransferType 
+      })
       .returning();
     return newOperation;
   }
@@ -580,10 +588,12 @@ export class DatabaseStorage implements IStorage {
     operation: InsertOperation,
     userWallets: Wallet[]
   ): Promise<Operation> {
+    const details = operation.details || {};
     let transferType: string | null = null;
+    
     if (operation.type === "transfer_in" || operation.type === "transfer_out") {
-      const fromExists = operation.walletFrom && userWallets.some((w) => w.id.toString() === operation.walletFrom);
-      const toExists = operation.walletTo && userWallets.some((w) => w.id.toString() === operation.walletTo);
+      const fromExists = details.walletFrom && userWallets.some((w) => w.id.toString() === details.walletFrom);
+      const toExists = details.walletTo && userWallets.some((w) => w.id.toString() === details.walletTo);
 
       if (fromExists && toExists) {
         transferType = "internal";
@@ -592,9 +602,15 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
+    const detailsWithTransferType = { ...details, transferType };
+
     const [newOperation] = await db
       .insert(operations)
-      .values({ ...operation, supabaseUserId, transferType })
+      .values({ 
+        ...operation, 
+        supabaseUserId, 
+        details: detailsWithTransferType 
+      })
       .returning();
     return newOperation;
   }
@@ -605,13 +621,14 @@ export class DatabaseStorage implements IStorage {
 
     const ops = await this.getOperations(userId);
     for (const op of ops) {
+      const details = (op.details as { description?: string }) || {};
       entries.push({
         id: op.id.toString(),
         date: op.date,
         operationType: op.type,
-        description: op.description || `${op.type} ${op.tokenIn || op.tokenOut || ""}`.trim(),
+        description: details.description || `${op.type} ${op.tokenIn || op.tokenOut || ""}`.trim(),
         valueUsd: op.valueUsd,
-        valueBrl: op.valueBrl,
+        valueBrl: op.totalValueBrl,
         source: "operation",
         sourceId: op.id.toString(),
       });
@@ -641,13 +658,14 @@ export class DatabaseStorage implements IStorage {
 
     const ops = await this.getOperationsBySupabaseId(supabaseUserId);
     for (const op of ops) {
+      const details = (op.details as { description?: string }) || {};
       entries.push({
         id: op.id.toString(),
         date: op.date,
         operationType: op.type,
-        description: op.description || `${op.type} ${op.tokenIn || op.tokenOut || ""}`.trim(),
+        description: details.description || `${op.type} ${op.tokenIn || op.tokenOut || ""}`.trim(),
         valueUsd: op.valueUsd,
-        valueBrl: op.valueBrl,
+        valueBrl: op.totalValueBrl,
         source: "operation",
         sourceId: op.id.toString(),
       });
@@ -679,7 +697,7 @@ export class DatabaseStorage implements IStorage {
     const monthlyData: Record<string, number> = {};
     for (const op of sellOps) {
       const month = op.date.substring(0, 7);
-      monthlyData[month] = (monthlyData[month] || 0) + op.valueBrl;
+      monthlyData[month] = (monthlyData[month] || 0) + op.totalValueBrl;
     }
 
     const entries: CapitalGainsEntry[] = Object.entries(monthlyData)
@@ -704,7 +722,7 @@ export class DatabaseStorage implements IStorage {
     const monthlyData: Record<string, number> = {};
     for (const op of sellOps) {
       const month = op.date.substring(0, 7);
-      monthlyData[month] = (monthlyData[month] || 0) + op.valueBrl;
+      monthlyData[month] = (monthlyData[month] || 0) + op.totalValueBrl;
     }
 
     const entries: CapitalGainsEntry[] = Object.entries(monthlyData)

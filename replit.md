@@ -10,6 +10,8 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (December 2024)
 
+- **Operations Schema Redesign:** Implemented hybrid approach with normalized columns for fiscal data + JSON details field for auxiliary data (walletFrom, walletTo, description, transferType)
+- **New Operations Fields:** Added chain, hash, priceUsd, feeToken, amountFee, feeValueUsd, ptax, totalValueBrl as normalized columns for tax reporting
 - **Hybrid Architecture:** Supabase Auth (JWT) for authentication + local Replit PostgreSQL for data storage
 - **Wallet Registry:** Full CRUD operations with user isolation via supabaseUserId field
 - **PostgreSQL Database Integration:** Migrated from in-memory storage to PostgreSQL using Drizzle ORM. All user data (wallets, operations, pools, borrow/lend) is now persisted to database.
@@ -100,11 +102,13 @@ Preferred communication style: Simple, everyday language.
 
 **Database Tables:**
 - `users`: id (serial), username, password
-- `wallets`: id (serial), userId, name, address
-- `user_pools`: id (serial), userId, dex, network, pair, entry/exit dates, values, fees, status
-- `collaterals`: id (serial), userId, asset, amount, valueUsd, ltv, healthFactor
-- `borrows`: id (serial), userId, asset, borrowedAmount, interestRate, valueUsd
-- `operations`: id (serial), userId, type, tokens, amounts, values, dates, transferType
+- `wallets`: id (serial), userId, supabaseUserId, name, address
+- `user_pools`: id (serial), userId, supabaseUserId, dex, network, pair, entry/exit dates, values, fees, status
+- `collaterals`: id (serial), userId, supabaseUserId, asset, amount, valueUsd, ltv, healthFactor
+- `borrows`: id (serial), userId, supabaseUserId, asset, borrowedAmount, interestRate, valueUsd
+- `operations`: Hybrid approach with normalized columns + JSON details
+  - **Normalized fields:** id, userId, supabaseUserId, type, chain, hash, date, tokenIn, amountIn, tokenOut, amountOut, priceUsd, valueUsd, feeToken, amountFee, feeValueUsd, ptax, totalValueBrl
+  - **JSON details field:** walletFrom, walletTo, description, transferType
 
 ### External Dependencies
 
@@ -145,6 +149,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Future Enhancements (Planned)
 
+- **Database Migration to Supabase:** All tables will be migrated to Supabase PostgreSQL (currently using local Replit PostgreSQL)
 - Web3 wallet integration (MetaMask, WalletConnect)
 - Real-time price alerts
 - Multi-currency support

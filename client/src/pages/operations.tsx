@@ -69,33 +69,44 @@ export default function Operations() {
   const { isAuthenticated, setShowLoginModal } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<InsertOperation> & { 
-    hash?: string; 
-    chain?: string;
-    priceUsd?: number;
-    feeToken?: string; 
-    amountFee?: number;
-    feeValueUsd?: number;
-    ptax?: number;
+  const [formData, setFormData] = useState<{
+    type: string;
+    chain: string;
+    hash: string;
+    date: string;
+    tokenIn: string;
+    amountIn: number | null;
+    tokenOut: string;
+    amountOut: number | null;
+    priceUsd: number;
+    valueUsd: number;
+    feeToken: string;
+    amountFee: number;
+    feeValueUsd: number;
+    ptax: number;
+    totalValueBrl: number;
+    walletFrom: string;
+    walletTo: string;
+    description: string;
   }>({
     type: "buy",
     chain: "",
     hash: "",
-    tokenOut: "",
+    date: new Date().toISOString().split("T")[0],
     tokenIn: "",
-    amountOut: null,
     amountIn: null,
+    tokenOut: "",
+    amountOut: null,
     priceUsd: 0,
     valueUsd: 0,
-    valueBrl: 0,
-    walletFrom: null,
-    walletTo: null,
-    date: new Date().toISOString().split("T")[0],
-    description: "",
     feeToken: "",
     amountFee: 0,
     feeValueUsd: 0,
     ptax: 0,
+    totalValueBrl: 0,
+    walletFrom: "",
+    walletTo: "",
+    description: "",
   });
 
   const { data: operations, isLoading } = useQuery<Operation[]>({
@@ -126,27 +137,51 @@ export default function Operations() {
       type: "buy",
       chain: "",
       hash: "",
-      tokenOut: "",
+      date: new Date().toISOString().split("T")[0],
       tokenIn: "",
-      amountOut: null,
       amountIn: null,
+      tokenOut: "",
+      amountOut: null,
       priceUsd: 0,
       valueUsd: 0,
-      valueBrl: 0,
-      walletFrom: null,
-      walletTo: null,
-      date: new Date().toISOString().split("T")[0],
-      description: "",
       feeToken: "",
       amountFee: 0,
       feeValueUsd: 0,
       ptax: 0,
+      totalValueBrl: 0,
+      walletFrom: "",
+      walletTo: "",
+      description: "",
     });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate(formData as InsertOperation);
+    
+    const submitData: InsertOperation = {
+      type: formData.type,
+      chain: formData.chain || null,
+      hash: formData.hash || null,
+      date: formData.date,
+      tokenIn: formData.tokenIn || null,
+      amountIn: formData.amountIn,
+      tokenOut: formData.tokenOut || null,
+      amountOut: formData.amountOut,
+      priceUsd: formData.priceUsd || null,
+      valueUsd: formData.valueUsd,
+      feeToken: formData.feeToken || null,
+      amountFee: formData.amountFee || null,
+      feeValueUsd: formData.feeValueUsd || null,
+      ptax: formData.ptax || null,
+      totalValueBrl: formData.totalValueBrl,
+      details: {
+        walletFrom: formData.walletFrom || null,
+        walletTo: formData.walletTo || null,
+        description: formData.description || null,
+      },
+    };
+    
+    createMutation.mutate(submitData);
   };
 
   if (!isAuthenticated) {
@@ -233,34 +268,36 @@ export default function Operations() {
       ),
     },
     {
-      key: "valueBrl",
+      key: "totalValueBrl",
       header: "Value (BRL)",
       sortable: true,
       className: "text-right",
       render: (op: Operation) => (
         <span className="font-mono text-muted-foreground">
-          {formatCurrency(op.valueBrl, "BRL")}
+          {formatCurrency(op.totalValueBrl, "BRL")}
         </span>
       ),
     },
     {
       key: "transferType",
       header: "Transfer",
-      render: (op: Operation) =>
-        op.transferType ? (
+      render: (op: Operation) => {
+        const details = (op.details as { transferType?: string }) || {};
+        return details.transferType ? (
           <Badge
             variant="outline"
             className={
-              op.transferType === "internal"
+              details.transferType === "internal"
                 ? "text-cyan-400"
                 : "text-amber-400"
             }
           >
-            {op.transferType}
+            {details.transferType}
           </Badge>
         ) : (
           <span className="text-muted-foreground">-</span>
-        ),
+        );
+      },
     },
   ];
 
@@ -322,8 +359,8 @@ export default function Operations() {
             <DataTable
               data={operations}
               columns={columns}
-              searchKey="description"
-              searchPlaceholder="Search operations..."
+              searchKey="type"
+              searchPlaceholder="Search by type..."
               emptyMessage="No operations found"
               testId="table-operations"
             />
@@ -545,9 +582,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -679,9 +716,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -813,9 +850,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -828,7 +865,7 @@ export default function Operations() {
                       <Label>Wallet From</Label>
                       <Select
                         value={formData.walletFrom || "external"}
-                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? null : v })}
+                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? "" : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-from">
                           <SelectValue placeholder="Select wallet" />
@@ -847,7 +884,7 @@ export default function Operations() {
                       <Label>Wallet To</Label>
                       <Select
                         value={formData.walletTo || "external"}
-                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? null : v })}
+                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? "" : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-to">
                           <SelectValue placeholder="Select wallet" />
@@ -989,9 +1026,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1004,7 +1041,7 @@ export default function Operations() {
                       <Label>Wallet From</Label>
                       <Select
                         value={formData.walletFrom || "external"}
-                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? null : v })}
+                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? "" : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-from">
                           <SelectValue placeholder="Select wallet" />
@@ -1023,7 +1060,7 @@ export default function Operations() {
                       <Label>Wallet To</Label>
                       <Select
                         value={formData.walletTo || "external"}
-                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? null : v })}
+                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? "" : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-to">
                           <SelectValue placeholder="Select wallet" />
@@ -1165,9 +1202,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1299,9 +1336,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1450,9 +1487,9 @@ export default function Operations() {
                       id="valueBrl"
                       type="number"
                       step="0.01"
-                      value={formData.valueBrl || ""}
+                      value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1466,7 +1503,7 @@ export default function Operations() {
                       <Label>Wallet From</Label>
                       <Select
                         value={formData.walletFrom || "external"}
-                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? null : v })}
+                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v === "external" ? "" : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-from">
                           <SelectValue placeholder="Select wallet" />
@@ -1485,7 +1522,7 @@ export default function Operations() {
                       <Label>Wallet To</Label>
                       <Select
                         value={formData.walletTo || "external"}
-                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? null : v })}
+                        onValueChange={(v) => setFormData({ ...formData, walletTo: v === "external" ? "" : v })}
                       >
                         <SelectTrigger data-testid="select-wallet-to">
                           <SelectValue placeholder="Select wallet" />

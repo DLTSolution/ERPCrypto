@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, boolean, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, serial, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -91,26 +91,58 @@ export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, u
 export type Borrow = typeof borrows.$inferSelect;
 export type InsertBorrow = z.infer<typeof insertBorrowSchema>;
 
-// Operations table
+// Operations table - Hybrid approach with normalized columns + JSON details
 export const operations = pgTable("operations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
   supabaseUserId: text("supabase_user_id"),
-  type: text("type").notNull(), // buy, sell, swap, transfer_in, transfer_out, lost_funds
-  tokenOut: text("token_out"),
-  tokenIn: text("token_in"),
-  amountOut: real("amount_out"),
-  amountIn: real("amount_in"),
-  valueUsd: real("value_usd").notNull(),
-  valueBrl: real("value_brl").notNull(),
-  walletFrom: text("wallet_from"),
-  walletTo: text("wallet_to"),
+  
+  // Core normalized fields
+  type: text("type").notNull(), // buy, sell, swap, transfer_in, transfer_out, p2p_in, p2p_out, payments, lost_funds
+  chain: text("chain"), // arbitrum, base, bitcoin, bnb, ethereum, lightning, liquid, polygon, solana
+  hash: text("hash"), // transaction hash
   date: text("date").notNull(),
-  description: text("description"),
-  transferType: text("transfer_type"), // internal, external
+  
+  // Token fields
+  tokenIn: text("token_in"),
+  amountIn: real("amount_in"),
+  tokenOut: text("token_out"),
+  amountOut: real("amount_out"),
+  
+  // Value fields
+  priceUsd: real("price_usd"),
+  valueUsd: real("value_usd").notNull(),
+  
+  // Fee fields
+  feeToken: text("fee_token"),
+  amountFee: real("amount_fee"),
+  feeValueUsd: real("fee_value_usd"),
+  
+  // BRL conversion
+  ptax: real("ptax"),
+  totalValueBrl: real("total_value_brl").notNull(),
+  
+  // JSON for additional dynamic fields
+  details: jsonb("details"), // walletFrom, walletTo, description, transferType, etc.
 });
 
-export const insertOperationSchema = createInsertSchema(operations).omit({ id: true, userId: true, supabaseUserId: true, transferType: true });
+// Define the details JSON schema
+export const operationDetailsSchema = z.object({
+  walletFrom: z.string().nullable().optional(),
+  walletTo: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  transferType: z.enum(["internal", "external"]).nullable().optional(),
+}).partial();
+
+export type OperationDetails = z.infer<typeof operationDetailsSchema>;
+
+export const insertOperationSchema = createInsertSchema(operations).omit({ 
+  id: true, 
+  userId: true, 
+  supabaseUserId: true 
+}).extend({
+  details: operationDetailsSchema.optional(),
+});
 
 export type Operation = typeof operations.$inferSelect;
 export type InsertOperation = z.infer<typeof insertOperationSchema>;
