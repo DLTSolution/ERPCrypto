@@ -512,12 +512,12 @@ export default function Operations() {
                     <Label htmlFor="amountIn">Amount In</Label>
                     <Input
                       id="amountIn"
-                      type="number"
-                      step="0.00000001"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00000000"
                       value={formData.amountIn ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountIn: e.target.value === "" ? null : parseFloat(e.target.value) })
+                        setFormData({ ...formData, amountIn: parseDecimalInputNullable(e.target.value) })
                       }
                       data-testid="input-amount-in"
                     />
@@ -528,12 +528,12 @@ export default function Operations() {
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
                       id="priceUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -542,12 +542,12 @@ export default function Operations() {
                     <Label htmlFor="valueUsd">Value (USD)</Label>
                     <Input
                       id="valueUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -572,12 +572,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -586,12 +586,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -603,12 +603,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -617,12 +617,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -651,12 +651,12 @@ export default function Operations() {
                     <Label htmlFor="amountOut">Amount Out</Label>
                     <Input
                       id="amountOut"
-                      type="number"
-                      step="0.00000001"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: e.target.value === "" ? null : parseFloat(e.target.value) })
+                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -667,12 +667,12 @@ export default function Operations() {
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
                       id="priceUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -681,12 +681,12 @@ export default function Operations() {
                     <Label htmlFor="valueUsd">Value (USD)</Label>
                     <Input
                       id="valueUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -711,12 +711,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -725,12 +725,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -742,12 +742,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -756,12 +756,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: e.target.value === "" ? 0 : parseFloat(e.target.value) })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -781,7 +781,8 @@ export default function Operations() {
                       id="tokenIn"
                       placeholder="e.g., BTC"
                       value={formData.tokenIn || ""}
-                      onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value.toUpperCase() })}
+                      className="uppercase"
                       data-testid="input-token-in"
                     />
                   </div>
@@ -789,11 +790,12 @@ export default function Operations() {
                     <Label htmlFor="amountIn">Amount In</Label>
                     <Input
                       id="amountIn"
-                      type="number"
-                      step="0.00000001"
-                      value={formData.amountIn || ""}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00000000"
+                      value={formData.amountIn ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountIn: parseFloat(e.target.value) || null })
+                        setFormData({ ...formData, amountIn: parseDecimalInputNullable(e.target.value) })
                       }
                       data-testid="input-amount-in"
                     />
@@ -804,12 +806,12 @@ export default function Operations() {
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
                       id="priceUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -818,11 +820,12 @@ export default function Operations() {
                     <Label htmlFor="valueUsd">Value (USD)</Label>
                     <Input
                       id="valueUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -838,7 +841,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -846,12 +850,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
-                        placeholder="0.00"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -860,12 +864,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -877,12 +881,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
-                      placeholder="5.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -891,11 +895,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -957,7 +962,8 @@ export default function Operations() {
                       id="tokenOut"
                       placeholder="e.g., BTC"
                       value={formData.tokenOut || ""}
-                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value.toUpperCase() })}
+                      className="uppercase"
                       data-testid="input-token-out"
                     />
                   </div>
@@ -965,11 +971,12 @@ export default function Operations() {
                     <Label htmlFor="amountOut">Amount Out</Label>
                     <Input
                       id="amountOut"
-                      type="number"
-                      step="0.00000001"
-                      value={formData.amountOut || ""}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00000000"
+                      value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -980,12 +987,12 @@ export default function Operations() {
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
                       id="priceUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -994,11 +1001,12 @@ export default function Operations() {
                     <Label htmlFor="valueUsd">Value (USD)</Label>
                     <Input
                       id="valueUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -1014,7 +1022,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -1022,12 +1031,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
-                        placeholder="0.00"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1036,12 +1045,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1053,12 +1062,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
-                      placeholder="5.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1067,11 +1076,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1133,7 +1143,8 @@ export default function Operations() {
                       id="tokenOut"
                       placeholder="e.g., BTC"
                       value={formData.tokenOut || ""}
-                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value.toUpperCase() })}
+                      className="uppercase"
                       data-testid="input-token-out"
                     />
                   </div>
@@ -1141,11 +1152,12 @@ export default function Operations() {
                     <Label htmlFor="amountOut">Amount Out</Label>
                     <Input
                       id="amountOut"
-                      type="number"
-                      step="0.00000001"
-                      value={formData.amountOut || ""}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00000000"
+                      value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -1156,12 +1168,12 @@ export default function Operations() {
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
                       id="priceUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -1170,11 +1182,12 @@ export default function Operations() {
                     <Label htmlFor="valueUsd">Value (USD)</Label>
                     <Input
                       id="valueUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -1190,7 +1203,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -1198,12 +1212,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
-                        placeholder="0.00"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1212,12 +1226,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1229,12 +1243,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
-                      placeholder="5.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1243,11 +1257,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1267,7 +1282,8 @@ export default function Operations() {
                       id="tokenOut"
                       placeholder="e.g., BTC"
                       value={formData.tokenOut || ""}
-                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value.toUpperCase() })}
+                      className="uppercase"
                       data-testid="input-token-out"
                     />
                   </div>
@@ -1275,11 +1291,12 @@ export default function Operations() {
                     <Label htmlFor="amountOut">Amount Out</Label>
                     <Input
                       id="amountOut"
-                      type="number"
-                      step="0.00000001"
-                      value={formData.amountOut || ""}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00000000"
+                      value={formData.amountOut ?? ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                        setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
                       }
                       data-testid="input-amount-out"
                     />
@@ -1290,12 +1307,12 @@ export default function Operations() {
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
                       id="priceUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, priceUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-price-usd"
                     />
@@ -1304,11 +1321,12 @@ export default function Operations() {
                     <Label htmlFor="valueUsd">Value (USD)</Label>
                     <Input
                       id="valueUsd"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.valueUsd || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-usd"
                       required
@@ -1324,7 +1342,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -1332,12 +1351,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
-                        placeholder="0.00"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1346,12 +1365,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1363,12 +1382,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
-                      placeholder="5.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1377,11 +1396,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
@@ -1402,7 +1422,8 @@ export default function Operations() {
                         id="tokenOut"
                         placeholder="e.g., BTC"
                         value={formData.tokenOut || ""}
-                        onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-token-out"
                       />
                     </div>
@@ -1410,11 +1431,12 @@ export default function Operations() {
                       <Label htmlFor="amountOut">Amount Out</Label>
                       <Input
                         id="amountOut"
-                        type="number"
-                        step="0.00000001"
-                        value={formData.amountOut || ""}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
+                        value={formData.amountOut ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                          setFormData({ ...formData, amountOut: parseDecimalInputNullable(e.target.value) })
                         }
                         data-testid="input-amount-out"
                       />
@@ -1430,7 +1452,8 @@ export default function Operations() {
                         id="tokenIn"
                         placeholder="e.g., ETH"
                         value={formData.tokenIn || ""}
-                        onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-token-in"
                       />
                     </div>
@@ -1438,11 +1461,12 @@ export default function Operations() {
                       <Label htmlFor="amountIn">Amount In</Label>
                       <Input
                         id="amountIn"
-                        type="number"
-                        step="0.00000001"
-                        value={formData.amountIn || ""}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
+                        value={formData.amountIn ?? ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountIn: parseFloat(e.target.value) || null })
+                          setFormData({ ...formData, amountIn: parseDecimalInputNullable(e.target.value) })
                         }
                         data-testid="input-amount-in"
                       />
@@ -1454,11 +1478,12 @@ export default function Operations() {
                   <Label htmlFor="valueUsd">Value (USD)</Label>
                   <Input
                     id="valueUsd"
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
                     value={formData.valueUsd || ""}
                     onChange={(e) =>
-                      setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                      setFormData({ ...formData, valueUsd: parseDecimalInput(e.target.value) })
                     }
                     data-testid="input-value-usd"
                     required
@@ -1474,7 +1499,8 @@ export default function Operations() {
                         id="feeToken"
                         placeholder="e.g., ETH"
                         value={formData.feeToken || ""}
-                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
                         data-testid="input-fee-token"
                       />
                     </div>
@@ -1482,12 +1508,12 @@ export default function Operations() {
                       <Label htmlFor="amountFee">Amount Fee</Label>
                       <Input
                         id="amountFee"
-                        type="number"
-                        step="0.00000001"
-                        placeholder="0.00"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
                         value={formData.amountFee || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, amountFee: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-amount-fee"
                       />
@@ -1496,12 +1522,12 @@ export default function Operations() {
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
                       <Input
                         id="feeValueUsd"
-                        type="number"
-                        step="0.01"
+                        type="text"
+                        inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
                         onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                          setFormData({ ...formData, feeValueUsd: parseDecimalInput(e.target.value) })
                         }
                         data-testid="input-fee-value-usd"
                       />
@@ -1514,12 +1540,12 @@ export default function Operations() {
                     <Label htmlFor="ptax">PTAX</Label>
                     <Input
                       id="ptax"
-                      type="number"
-                      step="0.0001"
-                      placeholder="5.50"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.0000"
                       value={formData.ptax || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, ptax: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-ptax"
                     />
@@ -1528,11 +1554,12 @@ export default function Operations() {
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
-                      type="number"
-                      step="0.01"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
                       value={formData.totalValueBrl || ""}
                       onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: parseFloat(e.target.value) || 0 })
+                        setFormData({ ...formData, totalValueBrl: parseDecimalInput(e.target.value) })
                       }
                       data-testid="input-value-brl"
                       required
