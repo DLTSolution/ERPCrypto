@@ -34,6 +34,8 @@ import {
   ShoppingCart,
   DollarSign,
   Import,
+  Users,
+  CreditCard,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Operation, InsertOperation, Wallet } from "@shared/schema";
@@ -44,6 +46,9 @@ const OPERATION_TYPES = [
   { value: "swap", label: "Swap", icon: RefreshCw, color: "text-cyan-400" },
   { value: "transfer_in", label: "Transfer In", icon: ArrowDownLeft, color: "text-purple-400" },
   { value: "transfer_out", label: "Transfer Out", icon: ArrowUpRight, color: "text-amber-400" },
+  { value: "p2p_in", label: "P2P In", icon: Users, color: "text-emerald-500" },
+  { value: "p2p_out", label: "P2P Out", icon: Users, color: "text-rose-500" },
+  { value: "payments", label: "Payments", icon: CreditCard, color: "text-blue-400" },
   { value: "lost_funds", label: "Lost Funds", icon: AlertTriangle, color: "text-rose-500" },
 ];
 
@@ -256,8 +261,8 @@ export default function Operations() {
     },
   ];
 
-  const needsTokenOut = ["sell", "swap", "transfer_out", "lost_funds"].includes(formData.type || "");
-  const needsTokenIn = ["buy", "swap", "transfer_in"].includes(formData.type || "");
+  const needsTokenOut = ["sell", "swap", "transfer_out", "p2p_out", "payments", "lost_funds"].includes(formData.type || "");
+  const needsTokenIn = ["buy", "swap", "transfer_in", "p2p_in"].includes(formData.type || "");
   const needsWallets = ["transfer_in", "transfer_out"].includes(formData.type || "");
 
   return (
