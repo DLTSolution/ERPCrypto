@@ -41,5 +41,10 @@ if (supabaseUrl) {
   );
 }
 
+// Prevent unhandled pool errors from crashing the process; log and let pg handle reconnection
+pool.on("error", (err) => {
+  console.error("Unexpected database error (pool)", err);
+});
+
 export { pool };
 export const db = drizzle(pool, { schema });

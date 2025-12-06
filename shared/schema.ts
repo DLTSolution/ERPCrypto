@@ -1,4 +1,4 @@
-import { pgTable, text, integer, real, boolean, serial, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, real, boolean, serial, jsonb, uuid, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -62,15 +62,26 @@ export type InsertUserPool = z.infer<typeof insertUserPoolSchema>;
 export const collaterals = pgTable("collaterals", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
-  supabaseUserId: text("supabase_user_id"),
+  supabaseUserId: uuid("supabase_user_id"),
+  protocol: text("protocol"),
   asset: text("asset").notNull(),
-  amount: real("amount").notNull(),
-  valueUsd: real("value_usd").notNull(),
-  ltv: real("ltv").notNull(),
-  healthFactor: real("health_factor").notNull(),
+  amount: numeric("amount").notNull(),
+  valueUsd: numeric("value_usd").notNull(),
+  chain: text("chain"),
+  hash: text("hash"),
+  txDate: text("tx_date"),
+  feeToken: text("fee_token"),
+  feeAmount: numeric("fee_amount"),
+  feeValueUsd: numeric("fee_value_usd"),
+  ptax: numeric("ptax"),
+  totalValueBrl: numeric("total_value_brl"),
 });
 
-export const insertCollateralSchema = createInsertSchema(collaterals).omit({ id: true, userId: true, supabaseUserId: true });
+export const insertCollateralSchema = createInsertSchema(collaterals).omit({
+  id: true,
+  userId: true,
+  supabaseUserId: true,
+});
 
 export type Collateral = typeof collaterals.$inferSelect;
 export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
@@ -79,11 +90,20 @@ export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
 export const borrows = pgTable("borrows", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => users.id),
-  supabaseUserId: text("supabase_user_id"),
+  supabaseUserId: uuid("supabase_user_id"),
+  protocol: text("protocol"),
   asset: text("asset").notNull(),
-  borrowedAmount: real("borrowed_amount").notNull(),
-  interestRate: real("interest_rate").notNull(),
-  valueUsd: real("value_usd").notNull(),
+  borrowedAmount: numeric("borrowed_amount").notNull(),
+  interestRate: numeric("interest_rate").notNull(),
+  valueUsd: numeric("value_usd").notNull(),
+  chain: text("chain"),
+  hash: text("hash"),
+  txDate: text("tx_date"),
+  feeToken: text("fee_token"),
+  feeAmount: numeric("fee_amount"),
+  feeValueUsd: numeric("fee_value_usd"),
+  ptax: numeric("ptax"),
+  totalValueBrl: numeric("total_value_brl"),
 });
 
 export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, userId: true, supabaseUserId: true });

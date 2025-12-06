@@ -237,12 +237,14 @@ export async function registerRoutes(
     try {
       const parsed = insertCollateralSchema.safeParse(req.body);
       if (!parsed.success) {
+        console.error("POST /api/collaterals validation error", parsed.error.flatten());
         return res.status(400).json({ message: "Invalid input" });
       }
 
       const collateral = await storage.createCollateralForSupabaseUser(req.supabaseUserId!, parsed.data);
       res.json(collateral);
     } catch (error) {
+      console.error("POST /api/collaterals error", error);
       res.status(500).json({ message: "Server error" });
     }
   });

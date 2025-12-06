@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -8,8 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +33,8 @@ import {
   AlertTriangle,
   DollarSign,
   Percent,
+  RefreshCw,
+  Import,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Collateral, Borrow, InsertCollateral, InsertBorrow } from "@shared/schema";
@@ -35,17 +43,14 @@ function formatCurrency(value: number): string {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function getHealthFactorColor(hf: number): string {
-  if (hf >= 1.5) return "health-safe";
-  if (hf >= 1.2) return "health-warning";
-  return "health-danger";
+function normalizeDecimal(value: string): string {
+  return value.replace(",", ".");
 }
 
-function getHealthFactorLabel(hf: number): string {
-  if (hf >= 2) return "Very Safe";
-  if (hf >= 1.5) return "Safe";
-  if (hf >= 1.2) return "Caution";
-  return "At Risk";
+function parseDecimalValue(value: string | number): number {
+  if (typeof value === "number") return value;
+  const parsed = parseFloat(normalizeDecimal(value));
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 export default function BorrowLend() {
@@ -57,15 +62,42 @@ export default function BorrowLend() {
     asset: "",
     amount: 0,
     valueUsd: 0,
-    ltv: 0.75,
-    healthFactor: 2,
   });
+  const [collateralAmountInput, setCollateralAmountInput] = useState("");
+  const [collateralValueUsdInput, setCollateralValueUsdInput] = useState("");
+  const [collateralExtra, setCollateralExtra] = useState({
+    date: new Date().toISOString().split("T")[0],
+    chain: "",
+    hash: "",
+    feeToken: "",
+    feeAmount: "",
+    feeValueUsd: "",
+    ptax: "",
+    totalValueBrl: "",
+  });
+  const [ptaxLoading, setPtaxLoading] = useState(false);
+  const [ptaxError, setPtaxError] = useState<string | null>(null);
   const [borrowForm, setBorrowForm] = useState<Partial<InsertBorrow>>({
+    protocol: "",
     asset: "",
     borrowedAmount: 0,
     interestRate: 0,
     valueUsd: 0,
   });
+  const [borrowAmountInput, setBorrowAmountInput] = useState("");
+  const [borrowValueUsdInput, setBorrowValueUsdInput] = useState("");
+  const [borrowExtra, setBorrowExtra] = useState({
+    date: new Date().toISOString().split("T")[0],
+    chain: "",
+    hash: "",
+    feeToken: "",
+    feeAmount: "",
+    feeValueUsd: "",
+    ptax: "",
+    totalValueBrl: "",
+  });
+  const [borrowPtaxLoading, setBorrowPtaxLoading] = useState(false);
+  const [borrowPtaxError, setBorrowPtaxError] = useState<string | null>(null);
 
   const { data: collaterals, isLoading: collateralsLoading } = useQuery<Collateral[]>({
     queryKey: ["/api/collaterals"],
@@ -101,6 +133,74 @@ export default function BorrowLend() {
     },
   });
 
+  useEffect(() => {
+    if (!isCollateralModalOpen || !collateralExtra.date) return;
+    fetchPtaxForDate(collateralExtra.date);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCollateralModalOpen, collateralExtra.date]);
+
+  const fetchPtaxForDate = async (date: string) => {
+    setPtaxLoading(true);
+    setPtaxError(null);
+    try {
+      const response = await fetch(`/api/ptax/${date}`);
+      const data = await response.json();
+      if (data.source === "error" || data.rate === null) {
+        setPtaxError(data.errorMessage || "PTAX not available for this date. Please enter manually.");
+        setCollateralExtra((prev) => ({ ...prev, date, ptax: "", totalValueBrl: "" }));
+        return;
+      }
+      const ptaxValue = data.rate.toFixed(4);
+      const feeNum = parseDecimalValue(collateralExtra.feeValueUsd);
+      const totalBrl = ((collateralForm.valueUsd || 0) + feeNum) * data.rate;
+      setCollateralExtra((prev) => ({
+        ...prev,
+        date,
+        ptax: ptaxValue,
+        totalValueBrl: totalBrl.toFixed(2),
+      }));
+    } catch (error) {
+      setPtaxError("Failed to fetch PTAX. Please enter manually.");
+      setCollateralExtra((prev) => ({ ...prev, date, ptax: "", totalValueBrl: "" }));
+    } finally {
+      setPtaxLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isBorrowModalOpen || !borrowExtra.date) return;
+    fetchBorrowPtax(borrowExtra.date);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBorrowModalOpen, borrowExtra.date]);
+
+  const fetchBorrowPtax = async (date: string) => {
+    setBorrowPtaxLoading(true);
+    setBorrowPtaxError(null);
+    try {
+      const response = await fetch(`/api/ptax/${date}`);
+      const data = await response.json();
+      if (data.source === "error" || data.rate === null) {
+        setBorrowPtaxError(data.errorMessage || "PTAX not available for this date. Please enter manually.");
+        setBorrowExtra((prev) => ({ ...prev, date, ptax: "", totalValueBrl: "" }));
+        return;
+      }
+      const ptaxValue = data.rate.toFixed(4);
+      const feeNum = parseDecimalValue(borrowExtra.feeValueUsd);
+      const totalBrl = ((borrowForm.valueUsd || 0) + feeNum) * data.rate;
+      setBorrowExtra((prev) => ({
+        ...prev,
+        date,
+        ptax: ptaxValue,
+        totalValueBrl: totalBrl.toFixed(2),
+      }));
+    } catch (error) {
+      setBorrowPtaxError("Failed to fetch PTAX. Please enter manually.");
+      setBorrowExtra((prev) => ({ ...prev, date, ptax: "", totalValueBrl: "" }));
+    } finally {
+      setBorrowPtaxLoading(false);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
@@ -126,11 +226,8 @@ export default function BorrowLend() {
     );
   }
 
-  const totalCollateral = collaterals?.reduce((sum, c) => sum + c.valueUsd, 0) || 0;
-  const totalBorrowed = borrows?.reduce((sum, b) => sum + b.valueUsd, 0) || 0;
-  const avgHealthFactor = collaterals && collaterals.length > 0
-    ? collaterals.reduce((sum, c) => sum + c.healthFactor, 0) / collaterals.length
-    : 0;
+  const totalCollateral = collaterals?.reduce((sum, c) => sum + Number(c.valueUsd || 0), 0) || 0;
+  const totalBorrowed = borrows?.reduce((sum, b) => sum + Number(b.valueUsd || 0), 0) || 0;
 
   const collateralColumns = [
     {
@@ -150,38 +247,16 @@ export default function BorrowLend() {
       key: "amount",
       header: "Amount",
       sortable: true,
-      className: "text-right",
       render: (item: Collateral) => (
-        <span className="font-mono">{item.amount.toLocaleString()}</span>
+        <span className="font-mono">{Number(item.amount || 0).toLocaleString()}</span>
       ),
     },
     {
       key: "valueUsd",
       header: "USD Value",
       sortable: true,
-      className: "text-right",
       render: (item: Collateral) => (
-        <span className="font-mono">{formatCurrency(item.valueUsd)}</span>
-      ),
-    },
-    {
-      key: "ltv",
-      header: "LTV",
-      sortable: true,
-      className: "text-right",
-      render: (item: Collateral) => (
-        <span className="text-muted-foreground">{(item.ltv * 100).toFixed(0)}%</span>
-      ),
-    },
-    {
-      key: "healthFactor",
-      header: "Health Factor",
-      sortable: true,
-      className: "text-right",
-      render: (item: Collateral) => (
-        <Badge variant="outline" className={getHealthFactorColor(item.healthFactor)}>
-          {item.healthFactor.toFixed(2)}
-        </Badge>
+        <span className="font-mono">{formatCurrency(Number(item.valueUsd || 0))}</span>
       ),
     },
   ];
@@ -204,27 +279,24 @@ export default function BorrowLend() {
       key: "borrowedAmount",
       header: "Borrowed",
       sortable: true,
-      className: "text-right",
       render: (item: Borrow) => (
-        <span className="font-mono">{item.borrowedAmount.toLocaleString()}</span>
+        <span className="font-mono">{Number(item.borrowedAmount || 0).toLocaleString()}</span>
       ),
     },
     {
       key: "interestRate",
       header: "Interest Rate",
       sortable: true,
-      className: "text-right",
       render: (item: Borrow) => (
-        <span className="text-amber-400">{item.interestRate.toFixed(2)}%</span>
+        <span className="text-amber-400">{Number(item.interestRate || 0).toFixed(2)}%</span>
       ),
     },
     {
       key: "valueUsd",
       header: "USD Value",
       sortable: true,
-      className: "text-right",
       render: (item: Borrow) => (
-        <span className="font-mono text-rose-400">{formatCurrency(item.valueUsd)}</span>
+        <span className="font-mono text-rose-400">{formatCurrency(Number(item.valueUsd || 0))}</span>
       ),
     },
   ];
@@ -242,7 +314,7 @@ export default function BorrowLend() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MetricCard
           title="Total Collateral"
           value={formatCurrency(totalCollateral)}
@@ -256,24 +328,6 @@ export default function BorrowLend() {
           icon={<DollarSign className="w-5 h-5" />}
           variant="gradient"
           testId="metric-total-borrowed"
-        />
-        <MetricCard
-          title="Health Factor"
-          value={avgHealthFactor.toFixed(2)}
-          subtitle={
-            <Badge variant="outline" className={getHealthFactorColor(avgHealthFactor)}>
-              {getHealthFactorLabel(avgHealthFactor)}
-            </Badge>
-          }
-          icon={
-            avgHealthFactor >= 1.5 ? (
-              <ShieldCheck className="w-5 h-5" />
-            ) : (
-              <AlertTriangle className="w-5 h-5" />
-            )
-          }
-          variant={avgHealthFactor >= 1.5 ? "neon-cyan" : "default"}
-          testId="metric-health-factor"
         />
       </div>
 
@@ -360,7 +414,7 @@ export default function BorrowLend() {
       </div>
 
       <Dialog open={isCollateralModalOpen} onOpenChange={setIsCollateralModalOpen}>
-        <DialogContent className="glass-strong">
+        <DialogContent className="glass-strong max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Collateral</DialogTitle>
             <DialogDescription>Add a new collateral position</DialogDescription>
@@ -368,17 +422,96 @@ export default function BorrowLend() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              createCollateralMutation.mutate(collateralForm as InsertCollateral);
+              const payload: InsertCollateral = {
+                protocol: collateralForm.protocol || null,
+                asset: collateralForm.asset || "",
+                amount: collateralForm.amount ?? 0,
+                valueUsd: collateralForm.valueUsd ?? 0,
+                chain: collateralExtra.chain || null,
+                hash: collateralExtra.hash || null,
+                txDate: collateralExtra.date || null,
+                feeToken: collateralExtra.feeToken || null,
+                feeAmount: collateralExtra.feeAmount ? parseDecimalValue(collateralExtra.feeAmount) : null,
+                feeValueUsd: collateralExtra.feeValueUsd ? parseDecimalValue(collateralExtra.feeValueUsd) : null,
+                ptax: collateralExtra.ptax ? parseDecimalValue(collateralExtra.ptax) : null,
+                totalValueBrl: collateralExtra.totalValueBrl ? parseDecimalValue(collateralExtra.totalValueBrl) : null,
+              };
+              createCollateralMutation.mutate(payload);
             }}
             className="space-y-4"
           >
+            <div className="space-y-2">
+              <Label htmlFor="collateral-date">Date</Label>
+              <Input
+                id="collateral-date"
+                type="date"
+                value={collateralExtra.date}
+                onChange={(e) => setCollateralExtra({ ...collateralExtra, date: e.target.value })}
+              />
+            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="collateral-chain">Chain</Label>
+                  <Select
+                    value={collateralExtra.chain || ""}
+                    onValueChange={(v) => setCollateralExtra({ ...collateralExtra, chain: v })}
+                  >
+                    <SelectTrigger id="collateral-chain">
+                      <SelectValue placeholder="Select chain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                      <SelectItem value="base">Base</SelectItem>
+                      <SelectItem value="bitcoin">Bitcoin</SelectItem>
+                      <SelectItem value="bnb">BNB</SelectItem>
+                      <SelectItem value="ethereum">Ethereum</SelectItem>
+                      <SelectItem value="lightning">Lightning</SelectItem>
+                      <SelectItem value="liquid">Liquid</SelectItem>
+                      <SelectItem value="polygon">Polygon</SelectItem>
+                      <SelectItem value="solana">Solana</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="collateral-hash">Hash</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="collateral-hash"
+                      placeholder="0x..."
+                      value={collateralExtra.hash}
+                      onChange={(e) => setCollateralExtra({ ...collateralExtra, hash: e.target.value })}
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="shrink-0"
+                      title="Import data from hash (coming soon)"
+                    >
+                      <Import className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            <div className="space-y-2">
+              <Label htmlFor="collateral-protocol">Protocol</Label>
+              <Input
+                id="collateral-protocol"
+                placeholder="e.g., Aave"
+                value={collateralForm.protocol || ""}
+                onChange={(e) => setCollateralForm({ ...collateralForm, protocol: e.target.value.toUpperCase() })}
+                className="uppercase"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="collateral-asset">Asset</Label>
               <Input
                 id="collateral-asset"
                 placeholder="e.g., ETH"
                 value={collateralForm.asset}
-                onChange={(e) => setCollateralForm({ ...collateralForm, asset: e.target.value })}
+                onChange={(e) => setCollateralForm({ ...collateralForm, asset: e.target.value.toUpperCase() })}
+                className="uppercase"
                 data-testid="input-collateral-asset"
                 required
               />
@@ -388,12 +521,16 @@ export default function BorrowLend() {
                 <Label htmlFor="collateral-amount">Amount</Label>
                 <Input
                   id="collateral-amount"
-                  type="number"
-                  step="0.0001"
-                  value={collateralForm.amount || ""}
-                  onChange={(e) =>
-                    setCollateralForm({ ...collateralForm, amount: parseFloat(e.target.value) || 0 })
-                  }
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00000000"
+                  value={collateralAmountInput}
+                  onChange={(e) => {
+                    const amt = normalizeDecimal(e.target.value);
+                    const amtNum = parseDecimalValue(amt);
+                    setCollateralForm({ ...collateralForm, amount: amtNum });
+                    setCollateralAmountInput(amt);
+                  }}
                   data-testid="input-collateral-amount"
                   required
                 />
@@ -402,46 +539,107 @@ export default function BorrowLend() {
                 <Label htmlFor="collateral-value">USD Value</Label>
                 <Input
                   id="collateral-value"
-                  type="number"
-                  step="0.01"
-                  value={collateralForm.valueUsd || ""}
-                  onChange={(e) =>
-                    setCollateralForm({ ...collateralForm, valueUsd: parseFloat(e.target.value) || 0 })
-                  }
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={collateralValueUsdInput}
+                  onChange={(e) => {
+                    const valueText = normalizeDecimal(e.target.value);
+                    const val = parseDecimalValue(valueText);
+                    const feeUsd = parseDecimalValue(collateralExtra.feeValueUsd);
+                    const ptax = parseDecimalValue(collateralExtra.ptax);
+                    const totalBrl = ptax ? ((val + feeUsd) * ptax).toFixed(2) : "";
+                    setCollateralForm({ ...collateralForm, valueUsd: val });
+                    setCollateralValueUsdInput(valueText);
+                    setCollateralExtra({ ...collateralExtra, totalValueBrl: totalBrl });
+                  }}
                   data-testid="input-collateral-value"
                   required
                 />
               </div>
             </div>
+            <div className="border-t border-border/50 pt-4 mt-4">
+              <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="collateral-fee-token">Fee Token</Label>
+                  <Input
+                    id="collateral-fee-token"
+                    placeholder="e.g., ETH"
+                    value={collateralExtra.feeToken}
+                    onChange={(e) => setCollateralExtra({ ...collateralExtra, feeToken: e.target.value.toUpperCase() })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="collateral-fee-amount">Amount Fee</Label>
+                  <Input
+                    id="collateral-fee-amount"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00000000"
+                    value={collateralExtra.feeAmount}
+                    onChange={(e) => setCollateralExtra({ ...collateralExtra, feeAmount: normalizeDecimal(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="collateral-fee-value">Fee Value (USD)</Label>
+                  <Input
+                    id="collateral-fee-value"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={collateralExtra.feeValueUsd}
+                    onChange={(e) => {
+                      const feeUsd = normalizeDecimal(e.target.value);
+                      const feeNum = parseDecimalValue(feeUsd);
+                      const valUsd = collateralForm.valueUsd || 0;
+                      const ptax = parseDecimalValue(collateralExtra.ptax);
+                      const totalBrl = ptax ? ((valUsd + feeNum) * ptax).toFixed(2) : "";
+                      setCollateralExtra({ ...collateralExtra, feeValueUsd: feeUsd, totalValueBrl: totalBrl });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="collateral-ltv">LTV (0-1)</Label>
+                <Label htmlFor="collateral-ptax" className="flex items-center gap-2">
+                  PTAX
+                  {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                </Label>
                 <Input
-                  id="collateral-ltv"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="1"
-                  value={collateralForm.ltv || ""}
-                  onChange={(e) =>
-                    setCollateralForm({ ...collateralForm, ltv: parseFloat(e.target.value) || 0 })
-                  }
-                  data-testid="input-collateral-ltv"
-                  required
+                  id="collateral-ptax"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={ptaxLoading ? "Loading..." : "0.0000"}
+                  value={collateralExtra.ptax}
+                  onChange={(e) => {
+                    const ptax = normalizeDecimal(e.target.value);
+                    const ptaxNum = parseDecimalValue(ptax);
+                    const valUsd = collateralForm.valueUsd || 0;
+                    const feeNum = parseDecimalValue(collateralExtra.feeValueUsd);
+                    const totalBrl = ptaxNum ? ((valUsd + feeNum) * ptaxNum).toFixed(2) : "";
+                    setCollateralExtra({ ...collateralExtra, ptax, totalValueBrl: totalBrl });
+                    setPtaxError(null);
+                  }}
+                  className={ptaxError ? "border-amber-500" : ""}
                 />
+                {ptaxError && (
+                  <p className="text-xs text-amber-500 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    {ptaxError}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="collateral-hf">Health Factor</Label>
+                <Label htmlFor="collateral-total-brl">Total Value (BRL)</Label>
                 <Input
-                  id="collateral-hf"
-                  type="number"
-                  step="0.01"
-                  value={collateralForm.healthFactor || ""}
-                  onChange={(e) =>
-                    setCollateralForm({ ...collateralForm, healthFactor: parseFloat(e.target.value) || 0 })
-                  }
-                  data-testid="input-collateral-hf"
-                  required
+                  id="collateral-total-brl"
+                  type="text"
+                  placeholder="0.00"
+                  value={collateralExtra.totalValueBrl}
+                  disabled
+                  className="bg-muted/50"
                 />
               </div>
             </div>
@@ -463,7 +661,7 @@ export default function BorrowLend() {
       </Dialog>
 
       <Dialog open={isBorrowModalOpen} onOpenChange={setIsBorrowModalOpen}>
-        <DialogContent className="glass-strong">
+        <DialogContent className="glass-strong max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Borrow</DialogTitle>
             <DialogDescription>Add a new borrow position</DialogDescription>
@@ -471,17 +669,97 @@ export default function BorrowLend() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              createBorrowMutation.mutate(borrowForm as InsertBorrow);
+              const payload: InsertBorrow = {
+                protocol: borrowForm.protocol || null,
+                asset: borrowForm.asset || "",
+                borrowedAmount: borrowForm.borrowedAmount ?? 0,
+                interestRate: borrowForm.interestRate ?? 0,
+                valueUsd: borrowForm.valueUsd ?? 0,
+                chain: borrowExtra.chain || null,
+                hash: borrowExtra.hash || null,
+                txDate: borrowExtra.date || null,
+                feeToken: borrowExtra.feeToken || null,
+                feeAmount: borrowExtra.feeAmount ? parseDecimalValue(borrowExtra.feeAmount) : null,
+                feeValueUsd: borrowExtra.feeValueUsd ? parseDecimalValue(borrowExtra.feeValueUsd) : null,
+                ptax: borrowExtra.ptax ? parseDecimalValue(borrowExtra.ptax) : null,
+                totalValueBrl: borrowExtra.totalValueBrl ? parseDecimalValue(borrowExtra.totalValueBrl) : null,
+              };
+              createBorrowMutation.mutate(payload);
             }}
             className="space-y-4"
           >
+            <div className="space-y-2">
+              <Label htmlFor="borrow-date">Date</Label>
+              <Input
+                id="borrow-date"
+                type="date"
+                value={borrowExtra.date}
+                onChange={(e) => setBorrowExtra({ ...borrowExtra, date: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="borrow-chain">Chain</Label>
+                <Select
+                  value={borrowExtra.chain || ""}
+                  onValueChange={(v) => setBorrowExtra({ ...borrowExtra, chain: v })}
+                >
+                  <SelectTrigger id="borrow-chain">
+                    <SelectValue placeholder="Select chain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                    <SelectItem value="base">Base</SelectItem>
+                    <SelectItem value="bitcoin">Bitcoin</SelectItem>
+                    <SelectItem value="bnb">BNB</SelectItem>
+                    <SelectItem value="ethereum">Ethereum</SelectItem>
+                    <SelectItem value="lightning">Lightning</SelectItem>
+                    <SelectItem value="liquid">Liquid</SelectItem>
+                    <SelectItem value="polygon">Polygon</SelectItem>
+                    <SelectItem value="solana">Solana</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="borrow-hash">Hash</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="borrow-hash"
+                    placeholder="0x..."
+                    value={borrowExtra.hash}
+                    onChange={(e) => setBorrowExtra({ ...borrowExtra, hash: e.target.value })}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="shrink-0"
+                    title="Import data from hash (coming soon)"
+                  >
+                    <Import className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="borrow-protocol">Protocol</Label>
+              <Input
+                id="borrow-protocol"
+                placeholder="e.g., AAVE"
+                value={borrowForm.protocol}
+                onChange={(e) => setBorrowForm({ ...borrowForm, protocol: e.target.value.toUpperCase() })}
+                className="uppercase"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="borrow-asset">Asset</Label>
               <Input
                 id="borrow-asset"
                 placeholder="e.g., USDC"
                 value={borrowForm.asset}
-                onChange={(e) => setBorrowForm({ ...borrowForm, asset: e.target.value })}
+                onChange={(e) => setBorrowForm({ ...borrowForm, asset: e.target.value.toUpperCase() })}
+                className="uppercase"
                 data-testid="input-borrow-asset"
                 required
               />
@@ -491,11 +769,17 @@ export default function BorrowLend() {
                 <Label htmlFor="borrow-amount">Borrowed Amount</Label>
                 <Input
                   id="borrow-amount"
-                  type="number"
-                  step="0.01"
-                  value={borrowForm.borrowedAmount || ""}
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00000000"
+                  value={borrowAmountInput}
                   onChange={(e) =>
-                    setBorrowForm({ ...borrowForm, borrowedAmount: parseFloat(e.target.value) || 0 })
+                    {
+                      const amt = normalizeDecimal(e.target.value);
+                      const amtNum = parseDecimalValue(amt);
+                      setBorrowForm({ ...borrowForm, borrowedAmount: amtNum });
+                      setBorrowAmountInput(amt);
+                    }
                   }
                   data-testid="input-borrow-amount"
                   required
@@ -516,19 +800,115 @@ export default function BorrowLend() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="borrow-value">USD Value</Label>
-              <Input
-                id="borrow-value"
-                type="number"
-                step="0.01"
-                value={borrowForm.valueUsd || ""}
-                onChange={(e) =>
-                  setBorrowForm({ ...borrowForm, valueUsd: parseFloat(e.target.value) || 0 })
-                }
-                data-testid="input-borrow-value"
-                required
-              />
+              <div className="space-y-2">
+                <Label htmlFor="borrow-value">USD Value</Label>
+                <Input
+                  id="borrow-value"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={borrowValueUsdInput}
+                  onChange={(e) =>
+                    {
+                      const val = normalizeDecimal(e.target.value);
+                      const valNum = parseDecimalValue(val);
+                      const feeNum = parseDecimalValue(borrowExtra.feeValueUsd);
+                      const ptaxNum = parseDecimalValue(borrowExtra.ptax);
+                      const totalBrl = ptaxNum ? ((valNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setBorrowForm({ ...borrowForm, valueUsd: valNum });
+                      setBorrowValueUsdInput(val);
+                      setBorrowExtra({ ...borrowExtra, totalValueBrl: totalBrl });
+                    }
+                  }
+                  data-testid="input-borrow-value"
+                  required
+                />
+              </div>
+            <div className="border-t border-border/50 pt-4 mt-4">
+              <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="borrow-fee-token">Fee Token</Label>
+                  <Input
+                    id="borrow-fee-token"
+                    placeholder="e.g., ETH"
+                    value={borrowExtra.feeToken}
+                    onChange={(e) => setBorrowExtra({ ...borrowExtra, feeToken: e.target.value.toUpperCase() })}
+                    className="uppercase"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="borrow-fee-amount">Amount Fee</Label>
+                  <Input
+                    id="borrow-fee-amount"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00000000"
+                    value={borrowExtra.feeAmount}
+                    onChange={(e) => setBorrowExtra({ ...borrowExtra, feeAmount: normalizeDecimal(e.target.value) })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="borrow-fee-value">Fee Value (USD)</Label>
+                  <Input
+                    id="borrow-fee-value"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={borrowExtra.feeValueUsd}
+                    onChange={(e) => {
+                      const feeUsd = normalizeDecimal(e.target.value);
+                      const feeNum = parseDecimalValue(feeUsd);
+                      const valUsd = borrowForm.valueUsd || 0;
+                      const ptax = parseDecimalValue(borrowExtra.ptax);
+                      const totalBrl = ptax ? ((valUsd + feeNum) * ptax).toFixed(2) : "";
+                      setBorrowExtra({ ...borrowExtra, feeValueUsd: feeUsd, totalValueBrl: totalBrl });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="borrow-ptax" className="flex items-center gap-2">
+                  PTAX
+                  {borrowPtaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                </Label>
+                <Input
+                  id="borrow-ptax"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={borrowPtaxLoading ? "Loading..." : "0.0000"}
+                  value={borrowExtra.ptax}
+                  onChange={(e) => {
+                    const ptax = normalizeDecimal(e.target.value);
+                    const ptaxNum = parseDecimalValue(ptax);
+                    const valUsd = borrowForm.valueUsd || 0;
+                    const feeNum = parseDecimalValue(borrowExtra.feeValueUsd);
+                    const totalBrl = ptaxNum ? ((valUsd + feeNum) * ptaxNum).toFixed(2) : "";
+                    setBorrowExtra({ ...borrowExtra, ptax, totalValueBrl: totalBrl });
+                    setBorrowPtaxError(null);
+                  }}
+                  className={borrowPtaxError ? "border-amber-500" : ""}
+                />
+                {borrowPtaxError && (
+                  <p className="text-xs text-amber-500 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    {borrowPtaxError}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="borrow-total-brl">Total Value (BRL)</Label>
+                <Input
+                  id="borrow-total-brl"
+                  type="text"
+                  placeholder="0.00"
+                  value={borrowExtra.totalValueBrl}
+                  disabled
+                  className="bg-muted/50"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsBorrowModalOpen(false)}>
