@@ -545,8 +545,12 @@ export default function Operations() {
                         const newAmount = handleDecimalInput(e.target.value);
                         const amountNum = parseDecimalValueNullable(newAmount);
                         const priceNum = parseDecimalValueNullable(formData.priceUsd);
-                        const calculatedValue = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
-                        setFormData({ ...formData, amountIn: newAmount, valueUsd: calculatedValue });
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountIn: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
                       }}
                       data-testid="input-amount-in"
                     />
@@ -565,8 +569,12 @@ export default function Operations() {
                         const newPrice = handleDecimalInput(e.target.value);
                         const priceNum = parseDecimalValueNullable(newPrice);
                         const amountNum = parseDecimalValueNullable(formData.amountIn);
-                        const calculatedValue = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
-                        setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValue });
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
                       }}
                       data-testid="input-price-usd"
                     />
@@ -620,9 +628,14 @@ export default function Operations() {
                         inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
+                        onChange={(e) => {
+                          const newFee = handleDecimalInput(e.target.value);
+                          const feeNum = parseDecimalValueNullable(newFee) || 0;
+                          const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                          const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                          const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                          setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                        }}
                         data-testid="input-fee-value-usd"
                       />
                     </div>
@@ -637,9 +650,14 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.0000"
                       value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                      }}
                       data-testid="input-ptax"
                     />
                   </div>
@@ -648,14 +666,11 @@ export default function Operations() {
                     <Input
                       id="valueBrl"
                       type="text"
-                      inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-brl"
-                      required
                     />
                   </div>
                 </div>
