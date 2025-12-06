@@ -513,7 +513,7 @@ export default function Operations() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="valueBrl">Value (BRL)</Label>
+                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
                       type="number"
@@ -605,7 +605,7 @@ export default function Operations() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="valueBrl">Value (BRL)</Label>
+                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
                     <Input
                       id="valueBrl"
                       type="number"
