@@ -35,6 +35,7 @@ import {
   Percent,
   RefreshCw,
   Import,
+  RotateCcw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Collateral, Borrow, InsertCollateral, InsertBorrow } from "@shared/schema";
@@ -83,6 +84,7 @@ export default function BorrowLend() {
     borrowedAmount: 0,
     interestRate: 0,
     valueUsd: 0,
+    type: "borrow",
   });
   const [borrowAmountInput, setBorrowAmountInput] = useState("");
   const [borrowValueUsdInput, setBorrowValueUsdInput] = useState("");
@@ -98,6 +100,8 @@ export default function BorrowLend() {
   });
   const [borrowPtaxLoading, setBorrowPtaxLoading] = useState(false);
   const [borrowPtaxError, setBorrowPtaxError] = useState<string | null>(null);
+  const [borrowMode, setBorrowMode] = useState<"borrow" | "repay">("borrow");
+  const [selectedBorrowIdForRepay, setSelectedBorrowIdForRepay] = useState("");
 
   const { data: collaterals, isLoading: collateralsLoading } = useQuery<Collateral[]>({
     queryKey: ["/api/collaterals"],
@@ -125,7 +129,7 @@ export default function BorrowLend() {
     mutationFn: (data: InsertBorrow) => apiRequest("POST", "/api/borrows", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/borrows"] });
-      toast({ title: "Borrow added successfully" });
+      toast({ title: borrowMode === "repay" ? "Repay added successfully" : "Borrow added successfully" });
       setIsBorrowModalOpen(false);
     },
     onError: () => {
@@ -172,6 +176,15 @@ export default function BorrowLend() {
     fetchBorrowPtax(borrowExtra.date);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBorrowModalOpen, borrowExtra.date]);
+
+  useEffect(() => {
+    if (borrowMode === "repay" && !selectedBorrowIdForRepay && borrows && borrows.length > 0) {
+      const firstBorrow = borrows.find((b) => (b.type || "borrow") !== "repay");
+      if (firstBorrow) {
+        setSelectedBorrowIdForRepay(firstBorrow.id.toString());
+      }
+    }
+  }, [borrowMode, borrows, selectedBorrowIdForRepay]);
 
   const fetchBorrowPtax = async (date: string) => {
     setBorrowPtaxLoading(true);
@@ -378,15 +391,79 @@ export default function BorrowLend() {
               <Landmark className="w-5 h-5 text-amber-400" />
               <CardTitle className="text-lg">Borrowed</CardTitle>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setIsBorrowModalOpen(true)}
-              className="gap-1"
-              data-testid="button-add-borrow"
-            >
-              <Plus className="w-4 h-4" />
-              Add
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="gap-1 bg-gradient-to-r from-purple-500 to-cyan-500"
+                type="button"
+                data-testid="button-repay-borrow"
+                onClick={() => {
+                  if (!borrows || borrows.length === 0) {
+                    toast({ title: "Add a borrow before creating a repay", variant: "destructive" });
+                    return;
+                  }
+                  setBorrowMode("repay");
+                  setBorrowForm({
+                    protocol: "",
+                    asset: "",
+                    borrowedAmount: 0,
+                    interestRate: 0,
+                    valueUsd: 0,
+                    type: "repay",
+                  });
+                  setBorrowExtra({
+                    date: new Date().toISOString().split("T")[0],
+                    chain: "",
+                    hash: "",
+                    feeToken: "",
+                    feeAmount: "",
+                    feeValueUsd: "",
+                    ptax: "",
+                    totalValueBrl: "",
+                  });
+                  setBorrowAmountInput("");
+                  setBorrowValueUsdInput("");
+                  setSelectedBorrowIdForRepay("");
+                  setIsBorrowModalOpen(true);
+                }}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Repay
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setBorrowMode("borrow");
+                  setBorrowForm({
+                    protocol: "",
+                    asset: "",
+                    borrowedAmount: 0,
+                    interestRate: 0,
+                    valueUsd: 0,
+                    type: "borrow",
+                  });
+                  setBorrowExtra({
+                    date: new Date().toISOString().split("T")[0],
+                    chain: "",
+                    hash: "",
+                    feeToken: "",
+                    feeAmount: "",
+                    feeValueUsd: "",
+                    ptax: "",
+                    totalValueBrl: "",
+                  });
+                  setBorrowAmountInput("");
+                  setBorrowValueUsdInput("");
+                  setSelectedBorrowIdForRepay("");
+                  setIsBorrowModalOpen(true);
+                }}
+                className="gap-1"
+                data-testid="button-add-borrow"
+              >
+                <Plus className="w-4 h-4" />
+                Add
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             {borrowsLoading ? (
@@ -663,8 +740,10 @@ export default function BorrowLend() {
       <Dialog open={isBorrowModalOpen} onOpenChange={setIsBorrowModalOpen}>
         <DialogContent className="glass-strong max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Borrow</DialogTitle>
-            <DialogDescription>Add a new borrow position</DialogDescription>
+            <DialogTitle>{borrowMode === "repay" ? "Add Repay" : "Add Borrow"}</DialogTitle>
+            <DialogDescription>
+              {borrowMode === "repay" ? "Log a repayment for an existing borrow" : "Add a new borrow position"}
+            </DialogDescription>
           </DialogHeader>
           <form
             onSubmit={(e) => {
@@ -683,11 +762,39 @@ export default function BorrowLend() {
                 feeValueUsd: borrowExtra.feeValueUsd ? parseDecimalValue(borrowExtra.feeValueUsd) : null,
                 ptax: borrowExtra.ptax ? parseDecimalValue(borrowExtra.ptax) : null,
                 totalValueBrl: borrowExtra.totalValueBrl ? parseDecimalValue(borrowExtra.totalValueBrl) : null,
+                type: borrowMode,
+                parentBorrowId:
+                  borrowMode === "repay" && selectedBorrowIdForRepay
+                    ? parseInt(selectedBorrowIdForRepay, 10)
+                    : null,
               };
               createBorrowMutation.mutate(payload);
             }}
             className="space-y-4"
           >
+            {borrowMode === "repay" && (
+              <div className="space-y-2">
+                <Label htmlFor="borrow-parent">Repaying Borrow</Label>
+                <Select
+                  value={selectedBorrowIdForRepay}
+                  onValueChange={setSelectedBorrowIdForRepay}
+                  disabled={!borrows || borrows.length === 0}
+                >
+                  <SelectTrigger id="borrow-parent">
+                    <SelectValue placeholder="Select borrow to repay" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {borrows
+                      ?.filter((b) => (b.type || "borrow") !== "repay")
+                      .map((b) => (
+                        <SelectItem key={b.id} value={b.id.toString()}>
+                          #{b.id} · {b.asset} · {b.txDate || "no date"}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="borrow-date">Date</Label>
               <Input

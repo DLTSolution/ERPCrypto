@@ -104,6 +104,8 @@ export const borrows = pgTable("borrows", {
   feeValueUsd: numeric("fee_value_usd"),
   ptax: numeric("ptax"),
   totalValueBrl: numeric("total_value_brl"),
+  type: text("type").default("borrow"),
+  parentBorrowId: integer("parent_borrow_id"),
 });
 
 export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, userId: true, supabaseUserId: true });
