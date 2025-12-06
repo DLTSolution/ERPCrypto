@@ -71,6 +71,7 @@ export default function Operations() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<Partial<InsertOperation> & { 
     hash?: string; 
+    chain?: string;
     priceUsd?: number;
     feeToken?: string; 
     amountFee?: number;
@@ -78,6 +79,7 @@ export default function Operations() {
     ptax?: number;
   }>({
     type: "buy",
+    chain: "",
     hash: "",
     tokenOut: "",
     tokenIn: "",
@@ -122,6 +124,7 @@ export default function Operations() {
   const resetForm = () => {
     setFormData({
       type: "buy",
+      chain: "",
       hash: "",
       tokenOut: "",
       tokenIn: "",
@@ -368,6 +371,25 @@ export default function Operations() {
             <div className="space-y-2">
               <Label htmlFor="hash">Transaction Hash (optional)</Label>
               <div className="flex gap-2">
+                <Select
+                  value={formData.chain || ""}
+                  onValueChange={(v) => setFormData({ ...formData, chain: v })}
+                >
+                  <SelectTrigger className="w-[140px]" data-testid="select-chain">
+                    <SelectValue placeholder="Chain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="arbitrum">Arbitrum</SelectItem>
+                    <SelectItem value="base">Base</SelectItem>
+                    <SelectItem value="bitcoin">Bitcoin</SelectItem>
+                    <SelectItem value="bnb">BNB</SelectItem>
+                    <SelectItem value="ethereum">Ethereum</SelectItem>
+                    <SelectItem value="lightning">Lightning</SelectItem>
+                    <SelectItem value="liquid">Liquid</SelectItem>
+                    <SelectItem value="polygon">Polygon</SelectItem>
+                    <SelectItem value="solana">Solana</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input
                   id="hash"
                   placeholder="0x..."
