@@ -7,6 +7,7 @@ import {
   collaterals,
   borrows,
   operations,
+  ptaxRates,
   type User,
   type InsertUser,
   type Wallet,
@@ -25,6 +26,7 @@ import {
   type Candle,
   type TaxReportEntry,
   type CapitalGainsEntry,
+  type PtaxRateRecord,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -48,7 +50,9 @@ export interface IStorage {
 
   // PTAX (BRL/USD)
   getPtaxRate(): Promise<{ rate: number; date: string }>;
-  getHistoricalPtaxRate(date: string): Promise<number>;
+  getHistoricalPtaxRate(date: string): Promise<{ rate: number | null; source: "cache" | "api" | "error"; errorMessage?: string }>;
+  getCachedPtaxRate(date: string): Promise<PtaxRateRecord | undefined>;
+  savePtaxRate(date: string, cotacaoVenda: number): Promise<PtaxRateRecord>;
 
   // User Pools
   getUserPools(userId: number): Promise<UserPool[]>;
@@ -318,9 +322,8 @@ class PtaxService {
     }
   }
 
-  async getHistoricalRate(date: string): Promise<number> {
+  async getHistoricalRate(date: string): Promise<number | null> {
     try {
-      // Parse date and format for BCB API
       const d = new Date(date);
       const formatDate = (d: Date) =>
         `${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}-${d.getFullYear()}`;
@@ -330,7 +333,8 @@ class PtaxService {
       const response = await fetch(url);
 
       if (!response.ok) {
-        return this.fallbackRate;
+        console.error("BCB API returned error status:", response.status);
+        return null;
       }
 
       const data: PtaxResponse = await response.json();
@@ -338,10 +342,10 @@ class PtaxService {
         return data.value[0].cotacaoVenda;
       }
 
-      return this.fallbackRate;
+      return null;
     } catch (error) {
       console.error("Historical PTAX error:", error);
-      return this.fallbackRate;
+      throw error;
     }
   }
 }
@@ -468,13 +472,46 @@ export class DatabaseStorage implements IStorage {
     return coinGeckoService.getCandles(tokenId, days);
   }
 
-  // PTAX (BRL/USD) - Now using Banco Central API
+  // PTAX (BRL/USD) - Cache-first with BCB API fallback
   async getPtaxRate(): Promise<{ rate: number; date: string }> {
     return ptaxService.getCurrentRate();
   }
 
-  async getHistoricalPtaxRate(date: string): Promise<number> {
-    return ptaxService.getHistoricalRate(date);
+  async getCachedPtaxRate(date: string): Promise<PtaxRateRecord | undefined> {
+    const [record] = await db.select().from(ptaxRates).where(eq(ptaxRates.date, date));
+    return record || undefined;
+  }
+
+  async savePtaxRate(date: string, cotacaoVenda: number): Promise<PtaxRateRecord> {
+    const fetchedAt = new Date().toISOString();
+    const [record] = await db
+      .insert(ptaxRates)
+      .values({ date, cotacaoVenda, fetchedAt })
+      .onConflictDoUpdate({
+        target: ptaxRates.date,
+        set: { cotacaoVenda, fetchedAt },
+      })
+      .returning();
+    return record;
+  }
+
+  async getHistoricalPtaxRate(date: string): Promise<{ rate: number | null; source: "cache" | "api" | "error"; errorMessage?: string }> {
+    const cached = await this.getCachedPtaxRate(date);
+    if (cached) {
+      return { rate: cached.cotacaoVenda, source: "cache" };
+    }
+
+    try {
+      const rate = await ptaxService.getHistoricalRate(date);
+      if (rate !== null) {
+        await this.savePtaxRate(date, rate);
+        return { rate, source: "api" };
+      }
+      return { rate: null, source: "error", errorMessage: "PTAX not available for this date" };
+    } catch (error) {
+      console.error("Error fetching PTAX from BCB:", error);
+      return { rate: null, source: "error", errorMessage: "Failed to fetch PTAX from Banco Central" };
+    }
   }
 
   // User Pools

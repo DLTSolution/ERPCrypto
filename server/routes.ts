@@ -115,10 +115,15 @@ export async function registerRoutes(
 
   app.get("/api/ptax/:date", async (req, res) => {
     try {
-      const rate = await storage.getHistoricalPtaxRate(req.params.date);
-      res.json({ date: req.params.date, rate });
+      const result = await storage.getHistoricalPtaxRate(req.params.date);
+      res.json({ date: req.params.date, ...result });
     } catch (error) {
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ 
+        date: req.params.date, 
+        rate: null, 
+        source: "error", 
+        errorMessage: "Server error" 
+      });
     }
   });
 

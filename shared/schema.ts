@@ -147,6 +147,18 @@ export const insertOperationSchema = createInsertSchema(operations).omit({
 export type Operation = typeof operations.$inferSelect;
 export type InsertOperation = z.infer<typeof insertOperationSchema>;
 
+// PTAX Rates table (cache for BCB API)
+export const ptaxRates = pgTable("ptax_rates", {
+  date: text("date").primaryKey(), // YYYY-MM-DD format
+  cotacaoVenda: real("cotacao_venda").notNull(),
+  fetchedAt: text("fetched_at").notNull(), // ISO timestamp
+});
+
+export const insertPtaxRateSchema = createInsertSchema(ptaxRates);
+
+export type PtaxRateRecord = typeof ptaxRates.$inferSelect;
+export type InsertPtaxRateRecord = z.infer<typeof insertPtaxRateSchema>;
+
 // ============ NON-DATABASE TYPES (API responses) ============
 
 // Token/Market Data (from external API)
