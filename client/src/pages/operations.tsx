@@ -64,13 +64,21 @@ export default function Operations() {
   const { isAuthenticated, setShowLoginModal } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<InsertOperation> & { hash?: string; feeToken?: string; feeValueUsd?: number }>({
+  const [formData, setFormData] = useState<Partial<InsertOperation> & { 
+    hash?: string; 
+    priceUsd?: number;
+    feeToken?: string; 
+    amountFee?: number;
+    feeValueUsd?: number;
+    ptax?: number;
+  }>({
     type: "buy",
     hash: "",
     tokenOut: "",
     tokenIn: "",
     amountOut: null,
     amountIn: null,
+    priceUsd: 0,
     valueUsd: 0,
     valueBrl: 0,
     walletFrom: null,
@@ -78,7 +86,9 @@ export default function Operations() {
     date: new Date().toISOString().split("T")[0],
     description: "",
     feeToken: "",
+    amountFee: 0,
     feeValueUsd: 0,
+    ptax: 0,
   });
 
   const { data: operations, isLoading } = useQuery<Operation[]>({
@@ -112,6 +122,7 @@ export default function Operations() {
       tokenIn: "",
       amountOut: null,
       amountIn: null,
+      priceUsd: 0,
       valueUsd: 0,
       valueBrl: 0,
       walletFrom: null,
@@ -119,7 +130,9 @@ export default function Operations() {
       date: new Date().toISOString().split("T")[0],
       description: "",
       feeToken: "",
+      amountFee: 0,
       feeValueUsd: 0,
+      ptax: 0,
     });
   };
 
@@ -383,164 +396,317 @@ export default function Operations() {
               />
             </div>
 
-            {needsTokenOut && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tokenOut">Token Out</Label>
-                  <Input
-                    id="tokenOut"
-                    placeholder="e.g., BTC"
-                    value={formData.tokenOut || ""}
-                    onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
-                    data-testid="input-token-out"
-                  />
+            {/* BUY: Token In, Amount In, Price USD, Value USD */}
+            {formData.type === "buy" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tokenIn">Token In</Label>
+                    <Input
+                      id="tokenIn"
+                      placeholder="e.g., BTC"
+                      value={formData.tokenIn || ""}
+                      onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value })}
+                      data-testid="input-token-in"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amountIn">Amount In</Label>
+                    <Input
+                      id="amountIn"
+                      type="number"
+                      step="0.00000001"
+                      value={formData.amountIn || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, amountIn: parseFloat(e.target.value) || null })
+                      }
+                      data-testid="input-amount-in"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amountOut">Amount Out</Label>
-                  <Input
-                    id="amountOut"
-                    type="number"
-                    step="0.00000001"
-                    value={formData.amountOut || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
-                    }
-                    data-testid="input-amount-out"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceUsd">Price (USD)</Label>
+                    <Input
+                      id="priceUsd"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={formData.priceUsd || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, priceUsd: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-price-usd"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueUsd">Value (USD)</Label>
+                    <Input
+                      id="valueUsd"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueUsd || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-usd"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+                <div className="border-t border-border/50 pt-4 mt-4">
+                  <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="feeToken">Fee Token</Label>
+                      <Input
+                        id="feeToken"
+                        placeholder="e.g., ETH"
+                        value={formData.feeToken || ""}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        data-testid="input-fee-token"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountFee">Amount Fee</Label>
+                      <Input
+                        id="amountFee"
+                        type="number"
+                        step="0.00000001"
+                        placeholder="0.00"
+                        value={formData.amountFee || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                        }
+                        data-testid="input-amount-fee"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
+                      <Input
+                        id="feeValueUsd"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.feeValueUsd || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                        }
+                        data-testid="input-fee-value-usd"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ptax">PTAX</Label>
+                    <Input
+                      id="ptax"
+                      type="number"
+                      step="0.0001"
+                      placeholder="5.50"
+                      value={formData.ptax || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ptax: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-ptax"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueBrl">Value (BRL)</Label>
+                    <Input
+                      id="valueBrl"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueBrl || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-brl"
+                      required
+                    />
+                  </div>
+                </div>
+              </>
             )}
 
-            {needsTokenIn && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="tokenIn">Token In</Label>
-                  <Input
-                    id="tokenIn"
-                    placeholder="e.g., ETH"
-                    value={formData.tokenIn || ""}
-                    onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value })}
-                    data-testid="input-token-in"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amountIn">Amount In</Label>
-                  <Input
-                    id="amountIn"
-                    type="number"
-                    step="0.00000001"
-                    value={formData.amountIn || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amountIn: parseFloat(e.target.value) || null })
-                    }
-                    data-testid="input-amount-in"
-                  />
-                </div>
-              </div>
-            )}
+            {/* OTHER TYPES: Existing logic for sell, swap, transfer, lost_funds */}
+            {formData.type !== "buy" && (
+              <>
+                {needsTokenOut && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tokenOut">Token Out</Label>
+                      <Input
+                        id="tokenOut"
+                        placeholder="e.g., BTC"
+                        value={formData.tokenOut || ""}
+                        onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value })}
+                        data-testid="input-token-out"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountOut">Amount Out</Label>
+                      <Input
+                        id="amountOut"
+                        type="number"
+                        step="0.00000001"
+                        value={formData.amountOut || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountOut: parseFloat(e.target.value) || null })
+                        }
+                        data-testid="input-amount-out"
+                      />
+                    </div>
+                  </div>
+                )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="valueUsd">Value (USD)</Label>
-                <Input
-                  id="valueUsd"
-                  type="number"
-                  step="0.01"
-                  value={formData.valueUsd || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
-                  }
-                  data-testid="input-value-usd"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valueBrl">Value (BRL)</Label>
-                <Input
-                  id="valueBrl"
-                  type="number"
-                  step="0.01"
-                  value={formData.valueBrl || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
-                  }
-                  data-testid="input-value-brl"
-                  required
-                />
-              </div>
-            </div>
+                {needsTokenIn && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="tokenIn">Token In</Label>
+                      <Input
+                        id="tokenIn"
+                        placeholder="e.g., ETH"
+                        value={formData.tokenIn || ""}
+                        onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value })}
+                        data-testid="input-token-in"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountIn">Amount In</Label>
+                      <Input
+                        id="amountIn"
+                        type="number"
+                        step="0.00000001"
+                        value={formData.amountIn || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountIn: parseFloat(e.target.value) || null })
+                        }
+                        data-testid="input-amount-in"
+                      />
+                    </div>
+                  </div>
+                )}
 
-            <div className="border-t border-border/50 pt-4 mt-4">
-              <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="feeToken">Fee Token</Label>
-                  <Input
-                    id="feeToken"
-                    placeholder="e.g., ETH, BNB"
-                    value={formData.feeToken || ""}
-                    onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
-                    data-testid="input-fee-token"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="valueUsd">Value (USD)</Label>
+                    <Input
+                      id="valueUsd"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueUsd || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueUsd: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-usd"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueBrl">Value (BRL)</Label>
+                    <Input
+                      id="valueBrl"
+                      type="number"
+                      step="0.01"
+                      value={formData.valueBrl || ""}
+                      onChange={(e) =>
+                        setFormData({ ...formData, valueBrl: parseFloat(e.target.value) || 0 })
+                      }
+                      data-testid="input-value-brl"
+                      required
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
-                  <Input
-                    id="feeValueUsd"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.feeValueUsd || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
-                    }
-                    data-testid="input-fee-value-usd"
-                  />
-                </div>
-              </div>
-            </div>
 
-            {needsWallets && wallets && wallets.length > 0 && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Wallet From</Label>
-                  <Select
-                    value={formData.walletFrom || ""}
-                    onValueChange={(v) => setFormData({ ...formData, walletFrom: v || null })}
-                  >
-                    <SelectTrigger data-testid="select-wallet-from">
-                      <SelectValue placeholder="Select wallet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">External</SelectItem>
-                      {wallets.map((w) => (
-                        <SelectItem key={w.id} value={String(w.id)}>
-                          {w.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="border-t border-border/50 pt-4 mt-4">
+                  <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="feeToken">Fee Token</Label>
+                      <Input
+                        id="feeToken"
+                        placeholder="e.g., ETH"
+                        value={formData.feeToken || ""}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                        data-testid="input-fee-token"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountFee">Amount Fee</Label>
+                      <Input
+                        id="amountFee"
+                        type="number"
+                        step="0.00000001"
+                        placeholder="0.00"
+                        value={formData.amountFee || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountFee: parseFloat(e.target.value) || 0 })
+                        }
+                        data-testid="input-amount-fee"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
+                      <Input
+                        id="feeValueUsd"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={formData.feeValueUsd || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                        }
+                        data-testid="input-fee-value-usd"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Wallet To</Label>
-                  <Select
-                    value={formData.walletTo || ""}
-                    onValueChange={(v) => setFormData({ ...formData, walletTo: v || null })}
-                  >
-                    <SelectTrigger data-testid="select-wallet-to">
-                      <SelectValue placeholder="Select wallet" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">External</SelectItem>
-                      {wallets.map((w) => (
-                        <SelectItem key={w.id} value={String(w.id)}>
-                          {w.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+
+                {needsWallets && wallets && wallets.length > 0 && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Wallet From</Label>
+                      <Select
+                        value={formData.walletFrom || ""}
+                        onValueChange={(v) => setFormData({ ...formData, walletFrom: v || null })}
+                      >
+                        <SelectTrigger data-testid="select-wallet-from">
+                          <SelectValue placeholder="Select wallet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">External</SelectItem>
+                          {wallets.map((w) => (
+                            <SelectItem key={w.id} value={String(w.id)}>
+                              {w.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Wallet To</Label>
+                      <Select
+                        value={formData.walletTo || ""}
+                        onValueChange={(v) => setFormData({ ...formData, walletTo: v || null })}
+                      >
+                        <SelectTrigger data-testid="select-wallet-to">
+                          <SelectValue placeholder="Select wallet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">External</SelectItem>
+                          {wallets.map((w) => (
+                            <SelectItem key={w.id} value={String(w.id)}>
+                              {w.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="space-y-2">
