@@ -150,7 +150,7 @@ export type InsertOperation = z.infer<typeof insertOperationSchema>;
 // PTAX Rates table (cache for BCB API)
 export const ptaxRates = pgTable("ptax_rates", {
   date: text("date").primaryKey(), // YYYY-MM-DD format
-  cotacaoVenda: real("cotacao_venda").notNull(),
+  cotacao: real("cotacao").notNull(),
   fetchedAt: text("fetched_at").notNull(), // ISO timestamp
 });
 

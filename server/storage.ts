@@ -478,27 +478,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCachedPtaxRate(date: string): Promise<PtaxRateRecord | undefined> {
-    const [record] = await db.select().from(ptaxRates).where(eq(ptaxRates.date, date));
-    return record || undefined;
+    try {
+      const [record] = await db.select().from(ptaxRates).where(eq(ptaxRates.date, date));
+      return record || undefined;
+    } catch (error) {
+      console.error("PTAX cache read error:", error);
+      return undefined;
+    }
   }
 
   async savePtaxRate(date: string, cotacaoVenda: number): Promise<PtaxRateRecord> {
     const fetchedAt = new Date().toISOString();
-    const [record] = await db
-      .insert(ptaxRates)
-      .values({ date, cotacaoVenda, fetchedAt })
-      .onConflictDoUpdate({
-        target: ptaxRates.date,
-        set: { cotacaoVenda, fetchedAt },
-      })
-      .returning();
-    return record;
+    try {
+      const [record] = await db
+        .insert(ptaxRates)
+        .values({ date, cotacao: cotacaoVenda, fetchedAt })
+        .onConflictDoUpdate({
+          target: ptaxRates.date,
+          set: { cotacao: cotacaoVenda, fetchedAt },
+        })
+        .returning();
+      return record;
+    } catch (error) {
+      console.error("PTAX cache write error (continuing without cache):", error);
+      return { date, cotacao: cotacaoVenda, fetchedAt };
+    }
   }
 
   async getHistoricalPtaxRate(date: string): Promise<{ rate: number | null; source: "cache" | "api" | "error"; errorMessage?: string }> {
     const cached = await this.getCachedPtaxRate(date);
     if (cached) {
-      return { rate: cached.cotacaoVenda, source: "cache" };
+      return { rate: cached.cotacao, source: "cache" };
     }
 
     try {
@@ -594,9 +604,10 @@ export class DatabaseStorage implements IStorage {
     userWallets: Wallet[]
   ): Promise<Operation> {
     const details = operation.details || {};
+    const opType = operation.type?.toLowerCase();
     let transferType: string | null = null;
     
-    if (operation.type === "transfer_in" || operation.type === "transfer_out") {
+    if (opType === "transfer_in" || opType === "transfer_out") {
       const fromExists = details.walletFrom && userWallets.some((w) => w.id.toString() === details.walletFrom);
       const toExists = details.walletTo && userWallets.some((w) => w.id.toString() === details.walletTo);
 
@@ -605,6 +616,8 @@ export class DatabaseStorage implements IStorage {
       } else {
         transferType = "external";
       }
+    } else if (opType?.startsWith("p2p")) {
+      transferType = "external";
     }
 
     const detailsWithTransferType = { ...details, transferType };
@@ -626,9 +639,10 @@ export class DatabaseStorage implements IStorage {
     userWallets: Wallet[]
   ): Promise<Operation> {
     const details = operation.details || {};
+    const opType = operation.type?.toLowerCase();
     let transferType: string | null = null;
     
-    if (operation.type === "transfer_in" || operation.type === "transfer_out") {
+    if (opType === "transfer_in" || opType === "transfer_out") {
       const fromExists = details.walletFrom && userWallets.some((w) => w.id.toString() === details.walletFrom);
       const toExists = details.walletTo && userWallets.some((w) => w.id.toString() === details.walletTo);
 
@@ -637,6 +651,8 @@ export class DatabaseStorage implements IStorage {
       } else {
         transferType = "external";
       }
+    } else if (opType?.startsWith("p2p")) {
+      transferType = "external";
     }
 
     const detailsWithTransferType = { ...details, transferType };

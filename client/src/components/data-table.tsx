@@ -41,6 +41,7 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   searchKey?: string;
   searchPlaceholder?: string;
+  filters?: React.ReactNode;
   pageSize?: number;
   emptyMessage?: string;
   className?: string;
@@ -52,6 +53,7 @@ export function DataTable<T extends Record<string, unknown>>({
   columns,
   searchKey,
   searchPlaceholder = "Search...",
+  filters,
   pageSize: initialPageSize = 10,
   emptyMessage = "No data available",
   className,
@@ -113,19 +115,24 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className={cn("space-y-4", className)} data-testid={testId}>
-      {searchKey && (
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="pl-10"
-            data-testid="input-table-search"
-          />
+      {(filters || searchKey) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {filters}
+          {searchKey && (
+            <div className="relative max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder={searchPlaceholder}
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-10"
+                data-testid="input-table-search"
+              />
+            </div>
+          )}
         </div>
       )}
 

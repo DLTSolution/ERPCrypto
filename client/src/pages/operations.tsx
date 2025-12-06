@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -58,11 +58,7 @@ function formatCurrency(value: number, currency: "USD" | "BRL" = "USD"): string 
 }
 
 function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return new Date(dateStr).toLocaleDateString(undefined, { dateStyle: "short" });
 }
 
 function normalizeDecimal(value: string): string {
@@ -111,6 +107,7 @@ export default function Operations() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ptaxLoading, setPtaxLoading] = useState(false);
   const [ptaxError, setPtaxError] = useState<string | null>(null);
+  const [tokenFilter, setTokenFilter] = useState("");
   const [formData, setFormData] = useState<{
     type: string;
     chain: string;
@@ -156,6 +153,9 @@ export default function Operations() {
     enabled: isAuthenticated,
   });
 
+  const [startDateFilter, setStartDateFilter] = useState("");
+  const [endDateFilter, setEndDateFilter] = useState("");
+
   const { data: wallets } = useQuery<Wallet[]>({
     queryKey: ["/api/wallets"],
     enabled: isAuthenticated,
@@ -197,6 +197,13 @@ export default function Operations() {
     });
     setPtaxError(null);
   };
+
+  // Auto-fetch PTAX when the modal opens or when the date changes
+  useEffect(() => {
+    if (!isModalOpen || !formData.date) return;
+    fetchPtaxForDate(formData.date);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModalOpen, formData.date]);
 
   const fetchPtaxForDate = async (date: string) => {
     if (!date) return;
@@ -370,7 +377,6 @@ export default function Operations() {
       key: "valueUsd",
       header: "Value (USD)",
       sortable: true,
-      className: "text-right",
       render: (op: Operation) => (
         <span className="font-mono">{formatCurrency(op.valueUsd)}</span>
       ),
@@ -379,7 +385,6 @@ export default function Operations() {
       key: "totalValueBrl",
       header: "Value (BRL)",
       sortable: true,
-      className: "text-right",
       render: (op: Operation) => (
         <span className="font-mono text-muted-foreground">
           {formatCurrency(op.totalValueBrl, "BRL")}
@@ -412,6 +417,26 @@ export default function Operations() {
   const needsTokenOut = ["sell", "swap", "transfer_out", "p2p_out", "payments", "lost_funds"].includes(formData.type || "");
   const needsTokenIn = ["buy", "swap", "transfer_in", "p2p_in"].includes(formData.type || "");
   const needsWallets = ["transfer_in", "transfer_out"].includes(formData.type || "");
+
+  const filteredOperations =
+    operations?.filter((op) => {
+      const opDate = new Date(op.date);
+      if (startDateFilter) {
+        const start = new Date(startDateFilter);
+        if (opDate < start) return false;
+      }
+      if (endDateFilter) {
+        const end = new Date(endDateFilter);
+        if (opDate > end) return false;
+      }
+      const tokenQuery = tokenFilter.trim().toLowerCase();
+      if (tokenQuery) {
+        const tokenIn = op.tokenIn?.toLowerCase() || "";
+        const tokenOut = op.tokenOut?.toLowerCase() || "";
+        if (!tokenIn.includes(tokenQuery) && !tokenOut.includes(tokenQuery)) return false;
+      }
+      return true;
+    }) || [];
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -465,10 +490,37 @@ export default function Operations() {
             </div>
           ) : operations && operations.length > 0 ? (
             <DataTable
-              data={operations}
+              data={filteredOperations}
               columns={columns}
               searchKey="type"
               searchPlaceholder="Search by type..."
+              filters={
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Label className="text-sm text-muted-foreground">Date range:</Label>
+                  <Input
+                    type="date"
+                    value={startDateFilter}
+                    onChange={(e) => setStartDateFilter(e.target.value)}
+                    className="w-[150px]"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <Input
+                    type="date"
+                    value={endDateFilter}
+                    onChange={(e) => setEndDateFilter(e.target.value)}
+                    className="w-[150px]"
+                  />
+                  <Label className="text-sm text-muted-foreground ml-2">Token:</Label>
+                  <Input
+                    type="text"
+                    placeholder="Search token"
+                    value={tokenFilter}
+                    onChange={(e) => setTokenFilter(e.target.value)}
+                    className="w-[160px]"
+                    data-testid="input-token-filter"
+                  />
+                </div>
+              }
               emptyMessage="No operations found"
               testId="table-operations"
             />
@@ -565,7 +617,6 @@ export default function Operations() {
                 onChange={(e) => {
                   const newDate = e.target.value;
                   setFormData({ ...formData, date: newDate });
-                  fetchPtaxForDate(newDate);
                 }}
                 data-testid="input-date"
                 required
@@ -764,45 +815,59 @@ export default function Operations() {
                       type="text"
                       inputMode="decimal"
                       placeholder="0.00000000"
-                      value={formData.amountOut ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-amount-out"
-                    />
-                  </div>
+                    value={formData.amountOut ?? ""}
+                    onChange={(e) => {
+                      const newAmount = handleDecimalInput(e.target.value);
+                      const amountNum = parseDecimalValueNullable(newAmount);
+                      const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, amountOut: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-amount-out"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="priceUsd">Price (USD)</Label>
-                    <Input
-                      id="priceUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.priceUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-price-usd"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valueUsd">Value (USD)</Label>
-                    <Input
-                      id="valueUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-value-usd"
-                      required
-                    />
-                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="priceUsd">Price (USD)</Label>
+                  <Input
+                    id="priceUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.priceUsd || ""}
+                    onChange={(e) => {
+                      const newPrice = handleDecimalInput(e.target.value);
+                      const priceNum = parseDecimalValueNullable(newPrice);
+                      const amountNum = parseDecimalValueNullable(formData.amountOut);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-price-usd"
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valueUsd">Value (USD)</Label>
+                  <Input
+                    id="valueUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.valueUsd || ""}
+                    disabled
+                    className="bg-muted/50"
+                    data-testid="input-value-usd"
+                  />
+                </div>
+              </div>
                 <div className="border-t border-border/50 pt-4 mt-4">
                   <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
                   <div className="grid grid-cols-3 gap-4">
@@ -833,34 +898,55 @@ export default function Operations() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
-                      <Input
-                        id="feeValueUsd"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
-                        data-testid="input-fee-value-usd"
-                      />
-                    </div>
+                    <Input
+                      id="feeValueUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.feeValueUsd || ""}
+                      onChange={(e) => {
+                        const newFee = handleDecimalInput(e.target.value);
+                        const feeNum = parseDecimalValueNullable(newFee) || 0;
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-fee-value-usd"
+                    />
+                  </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
                     <Input
                       id="ptax"
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.0000"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
                       value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
                       data-testid="input-ptax"
                     />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
@@ -870,11 +956,9 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-brl"
-                      required
                     />
                   </div>
                 </div>
@@ -898,50 +982,64 @@ export default function Operations() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="amountIn">Amount In</Label>
-                    <Input
-                      id="amountIn"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00000000"
-                      value={formData.amountIn ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amountIn: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-amount-in"
-                    />
-                  </div>
+                  <Input
+                    id="amountIn"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00000000"
+                    value={formData.amountIn ?? ""}
+                    onChange={(e) => {
+                      const newAmount = handleDecimalInput(e.target.value);
+                      const amountNum = parseDecimalValueNullable(newAmount);
+                      const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, amountIn: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-amount-in"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
-                      id="priceUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.priceUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-price-usd"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valueUsd">Value (USD)</Label>
-                    <Input
-                      id="valueUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-value-usd"
-                      required
-                    />
-                  </div>
+                    id="priceUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.priceUsd || ""}
+                    onChange={(e) => {
+                      const newPrice = handleDecimalInput(e.target.value);
+                      const priceNum = parseDecimalValueNullable(newPrice);
+                      const amountNum = parseDecimalValueNullable(formData.amountIn);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-price-usd"
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valueUsd">Value (USD)</Label>
+                  <Input
+                    id="valueUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.valueUsd || ""}
+                    disabled
+                    className="bg-muted/50"
+                    data-testid="input-value-usd"
+                  />
+                </div>
+              </div>
                 <div className="border-t border-border/50 pt-4 mt-4">
                   <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
                   <div className="grid grid-cols-3 gap-4">
@@ -972,34 +1070,55 @@ export default function Operations() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
-                      <Input
-                        id="feeValueUsd"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
-                        data-testid="input-fee-value-usd"
-                      />
-                    </div>
+                    <Input
+                      id="feeValueUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.feeValueUsd || ""}
+                      onChange={(e) => {
+                        const newFee = handleDecimalInput(e.target.value);
+                        const feeNum = parseDecimalValueNullable(newFee) || 0;
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-fee-value-usd"
+                    />
                   </div>
                 </div>
+              </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
                     <Input
                       id="ptax"
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.0000"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
                       value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
                       data-testid="input-ptax"
                     />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
@@ -1009,11 +1128,9 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-brl"
-                      required
                     />
                   </div>
                 </div>
@@ -1085,9 +1202,17 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newAmount = handleDecimalInput(e.target.value);
+                        const amountNum = parseDecimalValueNullable(newAmount);
+                        const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountOut: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
                       data-testid="input-amount-out"
                     />
                   </div>
@@ -1096,33 +1221,39 @@ export default function Operations() {
                   <div className="space-y-2">
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
-                      id="priceUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.priceUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-price-usd"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valueUsd">Value (USD)</Label>
-                    <Input
-                      id="valueUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-value-usd"
-                      required
-                    />
-                  </div>
+                    id="priceUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.priceUsd || ""}
+                    onChange={(e) => {
+                      const newPrice = handleDecimalInput(e.target.value);
+                      const priceNum = parseDecimalValueNullable(newPrice);
+                      const amountNum = parseDecimalValueNullable(formData.amountOut);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-price-usd"
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valueUsd">Value (USD)</Label>
+                  <Input
+                    id="valueUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.valueUsd || ""}
+                    disabled
+                    className="bg-muted/50"
+                    data-testid="input-value-usd"
+                  />
+                </div>
+              </div>
                 <div className="border-t border-border/50 pt-4 mt-4">
                   <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
                   <div className="grid grid-cols-3 gap-4">
@@ -1153,51 +1284,70 @@ export default function Operations() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
-                      <Input
-                        id="feeValueUsd"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
-                        data-testid="input-fee-value-usd"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
                     <Input
-                      id="ptax"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.0000"
-                      value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-ptax"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
-                    <Input
-                      id="valueBrl"
+                      id="feeValueUsd"
                       type="text"
                       inputMode="decimal"
                       placeholder="0.00"
-                      value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-value-brl"
-                      required
+                      value={formData.feeValueUsd || ""}
+                      onChange={(e) => {
+                        const newFee = handleDecimalInput(e.target.value);
+                        const feeNum = parseDecimalValueNullable(newFee) || 0;
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-fee-value-usd"
                     />
                   </div>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ptax" className="flex items-center gap-2">
+                    PTAX
+                    {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                  </Label>
+                  <Input
+                    id="ptax"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={ptaxLoading ? "Loading..." : "0.0000"}
+                    value={formData.ptax || ""}
+                    onChange={(e) => {
+                      const newPtax = handleDecimalInput(e.target.value);
+                      const ptaxNum = parseDecimalValueNullable(newPtax);
+                      const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                      setPtaxError(null);
+                    }}
+                    className={ptaxError ? "border-amber-500" : ""}
+                    data-testid="input-ptax"
+                  />
+                  {ptaxError && (
+                    <p className="text-xs text-amber-500 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      {ptaxError}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valueBrl">Total Value (BRL)</Label>
+                  <Input
+                    id="valueBrl"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.totalValueBrl || ""}
+                    disabled
+                    className="bg-muted/50"
+                    data-testid="input-value-brl"
+                  />
+                </div>
+              </div>
                 {wallets && wallets.length > 0 && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -1266,9 +1416,17 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newAmount = handleDecimalInput(e.target.value);
+                        const amountNum = parseDecimalValueNullable(newAmount);
+                        const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountOut: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
                       data-testid="input-amount-out"
                     />
                   </div>
@@ -1277,35 +1435,41 @@ export default function Operations() {
                   <div className="space-y-2">
                     <Label htmlFor="priceUsd">Price (USD)</Label>
                     <Input
-                      id="priceUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.priceUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-price-usd"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="valueUsd">Value (USD)</Label>
-                    <Input
-                      id="valueUsd"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                      }
-                      data-testid="input-value-usd"
-                      required
-                    />
-                  </div>
+                    id="priceUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.priceUsd || ""}
+                    onChange={(e) => {
+                      const newPrice = handleDecimalInput(e.target.value);
+                      const priceNum = parseDecimalValueNullable(newPrice);
+                      const amountNum = parseDecimalValueNullable(formData.amountOut);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-price-usd"
+                  />
                 </div>
-                <div className="border-t border-border/50 pt-4 mt-4">
-                  <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="valueUsd">Value (USD)</Label>
+                  <Input
+                    id="valueUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.valueUsd || ""}
+                    disabled
+                    className="bg-muted/50"
+                    data-testid="input-value-usd"
+                  />
+                </div>
+              </div>
+              <div className="border-t border-border/50 pt-4 mt-4">
+                <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="feeToken">Fee Token</Label>
@@ -1334,34 +1498,55 @@ export default function Operations() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
-                      <Input
-                        id="feeValueUsd"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
-                        data-testid="input-fee-value-usd"
-                      />
-                    </div>
+                    <Input
+                      id="feeValueUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.feeValueUsd || ""}
+                      onChange={(e) => {
+                        const newFee = handleDecimalInput(e.target.value);
+                        const feeNum = parseDecimalValueNullable(newFee) || 0;
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-fee-value-usd"
+                    />
                   </div>
+                </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
                     <Input
                       id="ptax"
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.0000"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
                       value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
                       data-testid="input-ptax"
                     />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
@@ -1371,11 +1556,9 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-brl"
-                      required
                     />
                   </div>
                 </div>
@@ -1405,10 +1588,190 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00000000"
                       value={formData.amountOut ?? ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, amountOut: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newAmount = handleDecimalInput(e.target.value);
+                        const amountNum = parseDecimalValueNullable(newAmount);
+                        const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountOut: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
                       data-testid="input-amount-out"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceUsd">Price (USD)</Label>
+                    <Input
+                    id="priceUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.priceUsd || ""}
+                    onChange={(e) => {
+                      const newPrice = handleDecimalInput(e.target.value);
+                      const priceNum = parseDecimalValueNullable(newPrice);
+                      const amountNum = parseDecimalValueNullable(formData.amountOut);
+                      const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                      const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                    }}
+                    data-testid="input-price-usd"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valueUsd">Value (USD)</Label>
+                  <Input
+                    id="valueUsd"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    value={formData.valueUsd || ""}
+                    disabled
+                    className="bg-muted/50"
+                    data-testid="input-value-usd"
+                  />
+                </div>
+              </div>
+              <div className="border-t border-border/50 pt-4 mt-4">
+                <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="feeToken">Fee Token</Label>
+                      <Input
+                        id="feeToken"
+                        placeholder="e.g., ETH"
+                        value={formData.feeToken || ""}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
+                        data-testid="input-fee-token"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountFee">Amount Fee</Label>
+                      <Input
+                        id="amountFee"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
+                        value={formData.amountFee || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
+                        }
+                        data-testid="input-amount-fee"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
+                    <Input
+                      id="feeValueUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.feeValueUsd || ""}
+                      onChange={(e) => {
+                        const newFee = handleDecimalInput(e.target.value);
+                        const feeNum = parseDecimalValueNullable(newFee) || 0;
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-fee-value-usd"
+                    />
+                  </div>
+                </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
+                    <Input
+                      id="ptax"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
+                      value={formData.ptax || ""}
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
+                      data-testid="input-ptax"
+                    />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
+                    <Input
+                      id="valueBrl"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.totalValueBrl || ""}
+                      disabled
+                      className="bg-muted/50"
+                      data-testid="input-value-brl"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* P2P IN: same model as Buy (auto calc + PTAX feedback) */}
+            {formData.type === "p2p_in" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tokenIn">Token In</Label>
+                    <Input
+                      id="tokenIn"
+                      placeholder="e.g., ETH"
+                      value={formData.tokenIn || ""}
+                      onChange={(e) => setFormData({ ...formData, tokenIn: e.target.value.toUpperCase() })}
+                      className="uppercase"
+                      data-testid="input-token-in"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amountIn">Amount In</Label>
+                    <Input
+                      id="amountIn"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00000000"
+                      value={formData.amountIn ?? ""}
+                      onChange={(e) => {
+                        const newAmount = handleDecimalInput(e.target.value);
+                        const amountNum = parseDecimalValueNullable(newAmount);
+                        const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountIn: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-amount-in"
                     />
                   </div>
                 </div>
@@ -1421,9 +1784,17 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.priceUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, priceUsd: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPrice = handleDecimalInput(e.target.value);
+                        const priceNum = parseDecimalValueNullable(newPrice);
+                        const amountNum = parseDecimalValueNullable(formData.amountIn);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
                       data-testid="input-price-usd"
                     />
                   </div>
@@ -1435,14 +1806,13 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.valueUsd || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-usd"
-                      required
                     />
                   </div>
                 </div>
+
                 <div className="border-t border-border/50 pt-4 mt-4">
                   <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
                   <div className="grid grid-cols-3 gap-4">
@@ -1479,28 +1849,50 @@ export default function Operations() {
                         inputMode="decimal"
                         placeholder="0.00"
                         value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
+                        onChange={(e) => {
+                          const newFee = handleDecimalInput(e.target.value);
+                          const feeNum = parseDecimalValueNullable(newFee) || 0;
+                          const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                          const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                          const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                          setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                        }}
                         data-testid="input-fee-value-usd"
                       />
                     </div>
                   </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
                     <Input
                       id="ptax"
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.0000"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
                       value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
                       data-testid="input-ptax"
                     />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
@@ -1510,19 +1902,191 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-brl"
-                      required
                     />
                   </div>
                 </div>
               </>
             )}
 
-            {/* OTHER TYPES: swap, p2p_in, p2p_out */}
-            {!["buy", "sell", "transfer_in", "transfer_out", "payments", "lost_funds"].includes(formData.type || "") && (
+            {/* P2P OUT: same model as Sell (auto calc + PTAX feedback) */}
+            {formData.type === "p2p_out" && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tokenOut">Token Out</Label>
+                    <Input
+                      id="tokenOut"
+                      placeholder="e.g., BTC"
+                      value={formData.tokenOut || ""}
+                      onChange={(e) => setFormData({ ...formData, tokenOut: e.target.value.toUpperCase() })}
+                      className="uppercase"
+                      data-testid="input-token-out"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="amountOut">Amount Out</Label>
+                    <Input
+                      id="amountOut"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00000000"
+                      value={formData.amountOut ?? ""}
+                      onChange={(e) => {
+                        const newAmount = handleDecimalInput(e.target.value);
+                        const amountNum = parseDecimalValueNullable(newAmount);
+                        const priceNum = parseDecimalValueNullable(formData.priceUsd);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, amountOut: newAmount, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-amount-out"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceUsd">Price (USD)</Label>
+                    <Input
+                      id="priceUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.priceUsd || ""}
+                      onChange={(e) => {
+                        const newPrice = handleDecimalInput(e.target.value);
+                        const priceNum = parseDecimalValueNullable(newPrice);
+                        const amountNum = parseDecimalValueNullable(formData.amountOut);
+                        const calculatedValueUsd = (priceNum && amountNum) ? (priceNum * amountNum).toFixed(2) : "";
+                        const valueUsdNum = parseDecimalValueNullable(calculatedValueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, priceUsd: newPrice, valueUsd: calculatedValueUsd, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-price-usd"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueUsd">Value (USD)</Label>
+                    <Input
+                      id="valueUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.valueUsd || ""}
+                      disabled
+                      className="bg-muted/50"
+                      data-testid="input-value-usd"
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t border-border/50 pt-4 mt-4">
+                  <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="feeToken">Fee Token</Label>
+                      <Input
+                        id="feeToken"
+                        placeholder="e.g., ETH"
+                        value={formData.feeToken || ""}
+                        onChange={(e) => setFormData({ ...formData, feeToken: e.target.value.toUpperCase() })}
+                        className="uppercase"
+                        data-testid="input-fee-token"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="amountFee">Amount Fee</Label>
+                      <Input
+                        id="amountFee"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00000000"
+                        value={formData.amountFee || ""}
+                        onChange={(e) =>
+                          setFormData({ ...formData, amountFee: handleDecimalInput(e.target.value) })
+                        }
+                        data-testid="input-amount-fee"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
+                      <Input
+                        id="feeValueUsd"
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0.00"
+                        value={formData.feeValueUsd || ""}
+                        onChange={(e) => {
+                          const newFee = handleDecimalInput(e.target.value);
+                          const feeNum = parseDecimalValueNullable(newFee) || 0;
+                          const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                          const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                          const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                          setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                        }}
+                        data-testid="input-fee-value-usd"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
+                    <Input
+                      id="ptax"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
+                      value={formData.ptax || ""}
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
+                      data-testid="input-ptax"
+                    />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="valueBrl">Total Value (BRL)</Label>
+                    <Input
+                      id="valueBrl"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.totalValueBrl || ""}
+                      disabled
+                      className="bg-muted/50"
+                      data-testid="input-value-brl"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* OTHER TYPES: swap */}
+            {!["buy", "sell", "transfer_in", "transfer_out", "payments", "lost_funds", "p2p_in", "p2p_out"].includes(formData.type || "") && (
               <>
                 {needsTokenOut && (
                   <div className="grid grid-cols-2 gap-4">
@@ -1592,9 +2156,14 @@ export default function Operations() {
                     inputMode="decimal"
                     placeholder="0.00"
                     value={formData.valueUsd || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, valueUsd: handleDecimalInput(e.target.value) })
-                    }
+                    onChange={(e) => {
+                      const newValue = handleDecimalInput(e.target.value);
+                      const valueUsdNum = parseDecimalValueNullable(newValue);
+                      const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                      const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                      const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                      setFormData({ ...formData, valueUsd: newValue, totalValueBrl: calculatedBrl });
+                    }}
                     data-testid="input-value-usd"
                     required
                   />
@@ -1630,35 +2199,56 @@ export default function Operations() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
-                      <Input
-                        id="feeValueUsd"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0.00"
-                        value={formData.feeValueUsd || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, feeValueUsd: handleDecimalInput(e.target.value) })
-                        }
-                        data-testid="input-fee-value-usd"
-                      />
-                    </div>
+                    <Input
+                      id="feeValueUsd"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={formData.feeValueUsd || ""}
+                      onChange={(e) => {
+                        const newFee = handleDecimalInput(e.target.value);
+                        const feeNum = parseDecimalValueNullable(newFee) || 0;
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const ptaxNum = parseDecimalValueNullable(formData.ptax);
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, feeValueUsd: newFee, totalValueBrl: calculatedBrl });
+                      }}
+                      data-testid="input-fee-value-usd"
+                    />
                   </div>
+                </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="ptax">PTAX</Label>
+                    <Label htmlFor="ptax" className="flex items-center gap-2">
+                      PTAX
+                      {ptaxLoading && <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    </Label>
                     <Input
                       id="ptax"
                       type="text"
                       inputMode="decimal"
-                      placeholder="0.0000"
+                      placeholder={ptaxLoading ? "Loading..." : "0.0000"}
                       value={formData.ptax || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ptax: handleDecimalInput(e.target.value) })
-                      }
+                      onChange={(e) => {
+                        const newPtax = handleDecimalInput(e.target.value);
+                        const ptaxNum = parseDecimalValueNullable(newPtax);
+                        const valueUsdNum = parseDecimalValueNullable(formData.valueUsd);
+                        const feeNum = parseDecimalValueNullable(formData.feeValueUsd) || 0;
+                        const calculatedBrl = (valueUsdNum !== null && ptaxNum) ? ((valueUsdNum + feeNum) * ptaxNum).toFixed(2) : "";
+                        setFormData({ ...formData, ptax: newPtax, totalValueBrl: calculatedBrl });
+                        setPtaxError(null);
+                      }}
+                      className={ptaxError ? "border-amber-500" : ""}
                       data-testid="input-ptax"
                     />
+                    {ptaxError && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" />
+                        {ptaxError}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="valueBrl">Total Value (BRL)</Label>
@@ -1668,11 +2258,9 @@ export default function Operations() {
                       inputMode="decimal"
                       placeholder="0.00"
                       value={formData.totalValueBrl || ""}
-                      onChange={(e) =>
-                        setFormData({ ...formData, totalValueBrl: handleDecimalInput(e.target.value) })
-                      }
+                      disabled
+                      className="bg-muted/50"
                       data-testid="input-value-brl"
-                      required
                     />
                   </div>
                 </div>
