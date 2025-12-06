@@ -10,6 +10,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (December 2024)
 
+- **PTAX Auto-Fetch with Cache:** Buy form automatically fetches PTAX rates from BCB API when user changes the date. Uses cache-first strategy with `ptax_rates` table in Supabase. On API failure, clears PTAX/BRL fields forcing manual entry. Manual edits allowed but not cached.
+- **Buy Form Auto-Calculations:** Value (USD) = Price x Amount In; Total Value (BRL) = (Value USD + Fee Value USD) x PTAX
+- **Decimal Input Handling:** Token fields uppercase, Amount 8 decimals, price/value 2 decimals, PTAX 4 decimals. Auto-converts comma to period as decimal separator.
 - **Operations Supabase Integration:** Operations table created in Supabase with RLS policies for user isolation. Full CRUD operations working end-to-end.
 - **Operations Schema Redesign:** Implemented hybrid approach with normalized columns for fiscal data + JSON details field for auxiliary data (walletFrom, walletTo, description, transferType)
 - **New Operations Fields:** Added chain, hash, priceUsd, feeToken, amountFee, feeValueUsd, ptax, totalValueBrl as normalized columns for tax reporting
