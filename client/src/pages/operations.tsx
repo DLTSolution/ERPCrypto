@@ -63,7 +63,7 @@ export default function Operations() {
   const { isAuthenticated, setShowLoginModal } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<InsertOperation>>({
+  const [formData, setFormData] = useState<Partial<InsertOperation> & { feeToken?: string; feeValueUsd?: number }>({
     type: "buy",
     tokenOut: "",
     tokenIn: "",
@@ -75,6 +75,8 @@ export default function Operations() {
     walletTo: null,
     date: new Date().toISOString().split("T")[0],
     description: "",
+    feeToken: "",
+    feeValueUsd: 0,
   });
 
   const { data: operations, isLoading } = useQuery<Operation[]>({
@@ -113,6 +115,8 @@ export default function Operations() {
       walletTo: null,
       date: new Date().toISOString().split("T")[0],
       description: "",
+      feeToken: "",
+      feeValueUsd: 0,
     });
   };
 
@@ -439,6 +443,36 @@ export default function Operations() {
               </div>
             </div>
 
+            <div className="border-t border-border/50 pt-4 mt-4">
+              <Label className="text-sm text-muted-foreground mb-3 block">Transaction Fee</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="feeToken">Fee Token</Label>
+                  <Input
+                    id="feeToken"
+                    placeholder="e.g., ETH, BNB"
+                    value={formData.feeToken || ""}
+                    onChange={(e) => setFormData({ ...formData, feeToken: e.target.value })}
+                    data-testid="input-fee-token"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="feeValueUsd">Fee Value (USD)</Label>
+                  <Input
+                    id="feeValueUsd"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.feeValueUsd || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, feeValueUsd: parseFloat(e.target.value) || 0 })
+                    }
+                    data-testid="input-fee-value-usd"
+                  />
+                </div>
+              </div>
+            </div>
+
             {needsWallets && wallets && wallets.length > 0 && (
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -453,7 +487,7 @@ export default function Operations() {
                     <SelectContent>
                       <SelectItem value="">External</SelectItem>
                       {wallets.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
+                        <SelectItem key={w.id} value={String(w.id)}>
                           {w.name}
                         </SelectItem>
                       ))}
@@ -472,7 +506,7 @@ export default function Operations() {
                     <SelectContent>
                       <SelectItem value="">External</SelectItem>
                       {wallets.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
+                        <SelectItem key={w.id} value={String(w.id)}>
                           {w.name}
                         </SelectItem>
                       ))}
