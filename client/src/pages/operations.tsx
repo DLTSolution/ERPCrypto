@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   ShoppingCart,
   DollarSign,
+  Import,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Operation, InsertOperation, Wallet } from "@shared/schema";
@@ -63,8 +64,9 @@ export default function Operations() {
   const { isAuthenticated, setShowLoginModal } = useAuth();
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<InsertOperation> & { feeToken?: string; feeValueUsd?: number }>({
+  const [formData, setFormData] = useState<Partial<InsertOperation> & { hash?: string; feeToken?: string; feeValueUsd?: number }>({
     type: "buy",
+    hash: "",
     tokenOut: "",
     tokenIn: "",
     amountOut: null,
@@ -105,6 +107,7 @@ export default function Operations() {
   const resetForm = () => {
     setFormData({
       type: "buy",
+      hash: "",
       tokenOut: "",
       tokenIn: "",
       amountOut: null,
@@ -342,6 +345,30 @@ export default function Operations() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="hash">Transaction Hash (optional)</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="hash"
+                  placeholder="0x..."
+                  value={formData.hash || ""}
+                  onChange={(e) => setFormData({ ...formData, hash: e.target.value })}
+                  className="font-mono text-sm flex-1"
+                  data-testid="input-hash"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="shrink-0"
+                  title="Import data from hash (coming soon)"
+                  data-testid="button-import-hash"
+                >
+                  <Import className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
