@@ -1,4 +1,5 @@
 import PDFDocument from "pdfkit";
+import type * as PDFKit from "pdfkit";
 import type { TaxReportEntry, CapitalGainsEntry } from "../shared/schema";
 
 interface IN2991ReportData {
@@ -10,7 +11,7 @@ interface IN2991ReportData {
   generatedAt: Date;
 }
 
-export function generateIN2991Report(data: IN2991ReportData): PDFDocument {
+export function generateIN2991Report(data: IN2991ReportData): PDFKit.PDFDocument {
   const doc = new PDFDocument({
     size: "A4",
     margins: { top: 50, bottom: 50, left: 50, right: 50 },

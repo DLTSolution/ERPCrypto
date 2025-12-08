@@ -49,7 +49,7 @@ export default function Wallets() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingWallet, setEditingWallet] = useState<WalletType | null>(null);
   const [deletingWallet, setDeletingWallet] = useState<WalletType | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [formData, setFormData] = useState<InsertWallet>({
     name: "",
     address: "",
@@ -73,7 +73,7 @@ export default function Wallets() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: InsertWallet }) =>
+    mutationFn: ({ id, data }: { id: number; data: InsertWallet }) =>
       apiRequest("PATCH", `/api/wallets/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
@@ -86,7 +86,7 @@ export default function Wallets() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("DELETE", `/api/wallets/${id}`),
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/wallets/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wallets"] });
       toast({ title: "Wallet deleted successfully" });
@@ -125,7 +125,7 @@ export default function Wallets() {
     }
   };
 
-  const copyAddress = async (address: string, id: string) => {
+  const copyAddress = async (address: string, id: number) => {
     await navigator.clipboard.writeText(address);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);

@@ -1502,7 +1502,7 @@ export default function BorrowLend() {
               <Input
                 id="borrow-protocol"
                 placeholder="e.g., AAVE"
-                value={borrowForm.protocol}
+                value={borrowForm.protocol ?? ""}
                 onChange={(e) => setBorrowForm({ ...borrowForm, protocol: e.target.value.toUpperCase() })}
                 className="uppercase"
               />
