@@ -27,7 +27,7 @@ import {
   type TaxReportEntry,
   type CapitalGainsEntry,
   type PtaxRateRecord,
-} from "@shared/schema";
+} from "../shared/schema";
 
 export interface IStorage {
   // Users

@@ -1,5 +1,5 @@
 import PDFDocument from "pdfkit";
-import type { TaxReportEntry, CapitalGainsEntry } from "@shared/schema";
+import type { TaxReportEntry, CapitalGainsEntry } from "../shared/schema";
 
 interface IN2991ReportData {
   username: string;

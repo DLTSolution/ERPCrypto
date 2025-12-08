@@ -9,7 +9,7 @@ import {
   insertCollateralSchema,
   insertBorrowSchema,
   insertOperationSchema,
-} from "@shared/schema";
+} from "../shared/schema";
 
 interface AuthenticatedRequest extends Request {
   supabaseUserId?: string;
