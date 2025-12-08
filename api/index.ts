@@ -4,7 +4,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { createServer } from "http";
-import { registerRoutes } from "../server/routes.ts";
+import { registerRoutes } from "../server/routes";
 
 const SessionStore = MemoryStore(session);
 
