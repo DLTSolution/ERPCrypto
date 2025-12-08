@@ -784,17 +784,17 @@ export default function BorrowLend() {
           title="Total Collateral"
           value={formatCurrency(totalCollateral)}
           icon={<ShieldCheck className="w-5 h-5" />}
-          variant="neon-green"
+          variant="default"
           testId="metric-total-collateral"
         />
         <MetricCard
           title="Total Borrowed"
           value={formatCurrency(totalBorrowed)}
           icon={<DollarSign className="w-5 h-5" />}
-          variant="neon-purple"
+          variant="default"
           testId="metric-total-borrowed"
         />
-        <Card className="glass card-hover neon-glow-green border border-emerald-500/30 relative overflow-hidden rounded-xl">
+        <Card className="glass card-hover relative overflow-hidden rounded-xl">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
               <div>

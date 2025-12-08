@@ -275,14 +275,14 @@ export default function UserPools() {
           value={formatCurrency(totalValue)}
           subtitle={`${openPools.length} active positions`}
           icon={<DollarSign className="w-5 h-5" />}
-          variant="gradient"
+          variant="default"
           testId="metric-total-value"
         />
         <MetricCard
           title="Total Fees Earned"
           value={formatCurrency(totalFees)}
           icon={<TrendingUp className="w-5 h-5" />}
-          variant="neon-green"
+          variant="default"
           testId="metric-total-fees"
         />
         <MetricCard

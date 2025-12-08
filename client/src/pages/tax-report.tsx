@@ -204,14 +204,14 @@ export default function TaxReport() {
           title="Total USD Value"
           value={formatCurrency(totalUsd)}
           icon={<DollarSign className="w-5 h-5" />}
-          variant="gradient"
+          variant="default"
           testId="metric-total-usd"
         />
         <MetricCard
           title="Total BRL Value"
           value={formatCurrency(totalBrl, "BRL")}
           icon={<DollarSign className="w-5 h-5" />}
-          variant="neon-purple"
+          variant="default"
           testId="metric-total-brl"
         />
         <MetricCard
@@ -219,7 +219,7 @@ export default function TaxReport() {
           value={monthsAboveThreshold.toString()}
           subtitle={monthsAboveThreshold > 0 ? "Tax reporting required" : "No tax due"}
           icon={<AlertTriangle className="w-5 h-5" />}
-          variant={monthsAboveThreshold > 0 ? "neon-cyan" : "default"}
+          variant="default"
           testId="metric-months-above"
         />
       </div>

@@ -173,7 +173,7 @@ export default function Market() {
               title="Total Market Cap"
               value={formatNumber(overview.totalMarketCap)}
               icon={<BarChart3 className="w-5 h-5" />}
-              variant="neon-purple"
+              variant="default"
               testId="metric-market-cap"
             />
             <MetricCard
@@ -181,7 +181,7 @@ export default function Market() {
               value={`${overview.btcDominance.toFixed(1)}%`}
               subtitle="Market share"
               icon={<Bitcoin className="w-5 h-5" />}
-              variant="neon-purple"
+              variant="default"
               testId="metric-btc-dominance"
             />
             <MetricCard
@@ -196,7 +196,7 @@ export default function Market() {
                 </Badge>
               }
               icon={<Gauge className="w-5 h-5" />}
-              variant="neon-cyan"
+              variant="default"
               testId="metric-fear-greed"
             />
           </>

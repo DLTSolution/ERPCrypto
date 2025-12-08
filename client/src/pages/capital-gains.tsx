@@ -159,7 +159,7 @@ export default function CapitalGains() {
           value={formatCurrency(totalSellVolume)}
           subtitle="Year to date"
           icon={<TrendingUp className="w-5 h-5" />}
-          variant="gradient"
+          variant="default"
           testId="metric-total-sell"
         />
         <MetricCard
@@ -167,7 +167,7 @@ export default function CapitalGains() {
           value={formatCurrency(totalTaxDue)}
           subtitle={`${taxableMonths} taxable month${taxableMonths !== 1 ? "s" : ""}`}
           icon={<DollarSign className="w-5 h-5" />}
-          variant={totalTaxDue > 0 ? "neon-purple" : "default"}
+          variant="default"
           testId="metric-total-tax"
         />
         <MetricCard
@@ -175,7 +175,7 @@ export default function CapitalGains() {
           value={formatCurrency(BRL_THRESHOLD)}
           subtitle="Monthly limit before tax"
           icon={<Calculator className="w-5 h-5" />}
-          variant="neon-cyan"
+          variant="default"
           testId="metric-threshold"
         />
       </div>

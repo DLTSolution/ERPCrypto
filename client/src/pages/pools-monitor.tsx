@@ -159,14 +159,14 @@ export default function PoolsMonitor() {
           title="Total TVL"
           value={formatNumber(totalTvl)}
           icon={<Droplets className="w-5 h-5" />}
-          variant="gradient"
+          variant="default"
           testId="metric-total-tvl"
         />
         <MetricCard
           title="24h Volume"
           value={formatNumber(totalVolume)}
           icon={<TrendingUp className="w-5 h-5" />}
-          variant="neon-cyan"
+          variant="default"
           testId="metric-total-volume"
         />
         <MetricCard
@@ -174,7 +174,7 @@ export default function PoolsMonitor() {
           value={`${avgEfficiency.toFixed(2)}x`}
           subtitle="Volume / TVL ratio"
           icon={<Zap className="w-5 h-5" />}
-          variant="neon-green"
+          variant="default"
           testId="metric-avg-efficiency"
         />
       </div>
