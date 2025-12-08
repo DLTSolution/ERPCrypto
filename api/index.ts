@@ -1,9 +1,10 @@
+import "ts-node/register";
 import "dotenv/config";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
 import { createServer } from "http";
-import { registerRoutes } from "../server/routes";
+import { registerRoutes } from "../server/routes.ts";
 
 const SessionStore = MemoryStore(session);
 
