@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, or, isNull } from "drizzle-orm";
 import { db } from "./db";
 import {
   users,
@@ -61,10 +61,12 @@ export interface IStorage {
   // Collaterals
   getCollaterals(userId: number): Promise<Collateral[]>;
   createCollateral(userId: number, collateral: InsertCollateral): Promise<Collateral>;
+  deleteCollateral(id: number, supabaseUserId: string): Promise<boolean>;
 
   // Borrows
   getBorrows(userId: number): Promise<Borrow[]>;
   createBorrow(userId: number, borrow: InsertBorrow): Promise<Borrow>;
+  deleteBorrow(id: number, supabaseUserId: string): Promise<boolean>;
 
   // Operations
   getOperations(userId: number): Promise<Operation[]>;
@@ -549,7 +551,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCollateralsBySupabaseId(supabaseUserId: string): Promise<Collateral[]> {
-    return await db.select().from(collaterals).where(eq(collaterals.supabaseUserId, supabaseUserId));
+    return await db
+      .select()
+      .from(collaterals)
+      .where(or(eq(collaterals.supabaseUserId, supabaseUserId), isNull(collaterals.supabaseUserId)));
   }
 
   async createCollateral(userId: number, collateral: InsertCollateral): Promise<Collateral> {
@@ -562,13 +567,29 @@ export class DatabaseStorage implements IStorage {
     return newCollateral;
   }
 
+  async deleteCollateral(id: number, supabaseUserId: string): Promise<boolean> {
+    const deleted = await db
+      .delete(collaterals)
+      .where(
+        and(
+          eq(collaterals.id, id),
+          or(eq(collaterals.supabaseUserId, supabaseUserId), isNull(collaterals.supabaseUserId))
+        )
+      )
+      .returning({ id: collaterals.id });
+    return deleted.length > 0;
+  }
+
   // Borrows
   async getBorrows(userId: number): Promise<Borrow[]> {
     return await db.select().from(borrows).where(eq(borrows.userId, userId));
   }
 
   async getBorrowsBySupabaseId(supabaseUserId: string): Promise<Borrow[]> {
-    return await db.select().from(borrows).where(eq(borrows.supabaseUserId, supabaseUserId));
+    return await db
+      .select()
+      .from(borrows)
+      .where(or(eq(borrows.supabaseUserId, supabaseUserId), isNull(borrows.supabaseUserId)));
   }
 
   async createBorrow(userId: number, borrow: InsertBorrow): Promise<Borrow> {
@@ -579,6 +600,16 @@ export class DatabaseStorage implements IStorage {
   async createBorrowForSupabaseUser(supabaseUserId: string, borrow: InsertBorrow): Promise<Borrow> {
     const [newBorrow] = await db.insert(borrows).values({ ...borrow, supabaseUserId }).returning();
     return newBorrow;
+  }
+
+  async deleteBorrow(id: number, supabaseUserId: string): Promise<boolean> {
+    const deleted = await db
+      .delete(borrows)
+      .where(
+        and(eq(borrows.id, id), or(eq(borrows.supabaseUserId, supabaseUserId), isNull(borrows.supabaseUserId)))
+      )
+      .returning({ id: borrows.id });
+    return deleted.length > 0;
   }
 
   // Operations

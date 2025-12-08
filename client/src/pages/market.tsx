@@ -173,7 +173,7 @@ export default function Market() {
               title="Total Market Cap"
               value={formatNumber(overview.totalMarketCap)}
               icon={<BarChart3 className="w-5 h-5" />}
-              variant="gradient"
+              variant="neon-purple"
               testId="metric-market-cap"
             />
             <MetricCard

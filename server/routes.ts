@@ -249,6 +249,23 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/collaterals/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "Invalid id" });
+      }
+      const ok = await storage.deleteCollateral(id, req.supabaseUserId!);
+      if (!ok) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("DELETE /api/collaterals/:id error", error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // ============ BORROW ROUTES (PROTECTED) ============
 
   app.get("/api/borrows", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -270,6 +287,23 @@ export async function registerRoutes(
       const borrow = await storage.createBorrowForSupabaseUser(req.supabaseUserId!, parsed.data);
       res.json(borrow);
     } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  app.delete("/api/borrows/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (Number.isNaN(id)) {
+        return res.status(400).json({ message: "Invalid id" });
+      }
+      const ok = await storage.deleteBorrow(id, req.supabaseUserId!);
+      if (!ok) {
+        return res.status(404).json({ message: "Not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("DELETE /api/borrows/:id error", error);
       res.status(500).json({ message: "Server error" });
     }
   });

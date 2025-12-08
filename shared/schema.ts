@@ -65,23 +65,36 @@ export const collaterals = pgTable("collaterals", {
   supabaseUserId: uuid("supabase_user_id"),
   protocol: text("protocol"),
   asset: text("asset").notNull(),
-  amount: numeric("amount").notNull(),
-  valueUsd: numeric("value_usd").notNull(),
+  amount: numeric("amount", { mode: "number" }).notNull(),
+  valueUsd: numeric("value_usd", { mode: "number" }).notNull(),
   chain: text("chain"),
   hash: text("hash"),
   txDate: text("tx_date"),
   feeToken: text("fee_token"),
-  feeAmount: numeric("fee_amount"),
-  feeValueUsd: numeric("fee_value_usd"),
-  ptax: numeric("ptax"),
-  totalValueBrl: numeric("total_value_brl"),
+  feeAmount: numeric("fee_amount", { mode: "number" }),
+  feeValueUsd: numeric("fee_value_usd", { mode: "number" }),
+  ptax: numeric("ptax", { mode: "number" }),
+  totalValueBrl: numeric("total_value_brl", { mode: "number" }),
+  type: text("type").default("collateral"),
+  parentCollateralId: integer("parent_collateral_id"),
 });
 
-export const insertCollateralSchema = createInsertSchema(collaterals).omit({
-  id: true,
-  userId: true,
-  supabaseUserId: true,
-});
+export const insertCollateralSchema = createInsertSchema(collaterals)
+  .omit({
+    id: true,
+    userId: true,
+    supabaseUserId: true,
+  })
+  .extend({
+    amount: z.coerce.number(),
+    valueUsd: z.coerce.number(),
+    feeAmount: z.coerce.number().nullable().optional(),
+    feeValueUsd: z.coerce.number().nullable().optional(),
+    ptax: z.coerce.number().nullable().optional(),
+    totalValueBrl: z.coerce.number().nullable().optional(),
+    type: z.enum(["collateral", "withdraw"]).optional(),
+    parentCollateralId: z.number().int().nullable().optional(),
+  });
 
 export type Collateral = typeof collaterals.$inferSelect;
 export type InsertCollateral = z.infer<typeof insertCollateralSchema>;
@@ -93,22 +106,32 @@ export const borrows = pgTable("borrows", {
   supabaseUserId: uuid("supabase_user_id"),
   protocol: text("protocol"),
   asset: text("asset").notNull(),
-  borrowedAmount: numeric("borrowed_amount").notNull(),
-  interestRate: numeric("interest_rate").notNull(),
-  valueUsd: numeric("value_usd").notNull(),
+  borrowedAmount: numeric("borrowed_amount", { mode: "number" }).notNull(),
+  interestRate: numeric("interest_rate", { mode: "number" }).notNull(),
+  valueUsd: numeric("value_usd", { mode: "number" }).notNull(),
   chain: text("chain"),
   hash: text("hash"),
   txDate: text("tx_date"),
   feeToken: text("fee_token"),
-  feeAmount: numeric("fee_amount"),
-  feeValueUsd: numeric("fee_value_usd"),
-  ptax: numeric("ptax"),
-  totalValueBrl: numeric("total_value_brl"),
+  feeAmount: numeric("fee_amount", { mode: "number" }),
+  feeValueUsd: numeric("fee_value_usd", { mode: "number" }),
+  ptax: numeric("ptax", { mode: "number" }),
+  totalValueBrl: numeric("total_value_brl", { mode: "number" }),
   type: text("type").default("borrow"),
   parentBorrowId: integer("parent_borrow_id"),
 });
 
-export const insertBorrowSchema = createInsertSchema(borrows).omit({ id: true, userId: true, supabaseUserId: true });
+export const insertBorrowSchema = createInsertSchema(borrows)
+  .omit({ id: true, userId: true, supabaseUserId: true })
+  .extend({
+    borrowedAmount: z.coerce.number(),
+    interestRate: z.coerce.number(),
+    valueUsd: z.coerce.number(),
+    feeAmount: z.coerce.number().nullable().optional(),
+    feeValueUsd: z.coerce.number().nullable().optional(),
+    ptax: z.coerce.number().nullable().optional(),
+    totalValueBrl: z.coerce.number().nullable().optional(),
+  });
 
 export type Borrow = typeof borrows.$inferSelect;
 export type InsertBorrow = z.infer<typeof insertBorrowSchema>;
